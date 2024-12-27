@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analysis Result</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,11 +14,13 @@
             color: #fff;
             min-height: 100vh;
         }
+    
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 15px;
         }
+    
         h1, h2 {
             text-align: center;
             margin-bottom: 20px;
@@ -25,6 +28,7 @@
             border-radius: 8px;
             background: rgba(255, 255, 255, 0.1);
         }
+    
         .table-container {
             width: 100%;
             overflow-x: auto;
@@ -33,6 +37,7 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             background: white;
         }
+    
         table {
             border-collapse: separate;
             border-spacing: 0;
@@ -41,12 +46,14 @@
             color: #333;
             font-size: 14px;
         }
+    
         th, td {
             padding: 12px 15px;
             text-align: left;
             border-bottom: 1px solid #ddd;
             white-space: nowrap;
         }
+    
         th {
             background-color: #1e3c72;
             color: #fff;
@@ -55,18 +62,25 @@
             top: 0;
             z-index: 10;
         }
+    
+        /* Bordes redondeados para la primera y última celda de la primera fila */
         th:first-child {
             border-top-left-radius: 10px;
         }
+        
         th:last-child {
             border-top-right-radius: 10px;
         }
+        
+        /* Bordes redondeados para la última fila */
         tr:last-child td:first-child {
             border-bottom-left-radius: 10px;
         }
+        
         tr:last-child td:last-child {
             border-bottom-right-radius: 10px;
         }
+    
         td input[type="number"] {
             width: 100%;
             padding: 8px;
@@ -75,11 +89,13 @@
             font-size: 14px;
             transition: all 0.3s ease;
         }
+    
         td input[type="number"]:focus {
             outline: none;
             border-color: #2a5298;
             box-shadow: 0 0 0 2px rgba(42, 82, 152, 0.2);
         }
+    
         button {
             display: block;
             margin: 20px auto;
@@ -93,11 +109,13 @@
             transition: all 0.3s ease;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+    
         button:hover {
             background-color: #2a5298;
             transform: translateY(-1px);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
+    
         .no-data {
             text-align: center;
             margin: 40px 20px;
@@ -106,119 +124,101 @@
             border-radius: 10px;
             font-size: 18px;
         }
+    
+        /* Estilos Responsivos */
         @media (max-width: 1024px) {
             body {
                 padding: 15px;
             }
+            
             th, td {
                 padding: 10px 12px;
                 font-size: 13px;
             }
+            
             td input[type="number"] {
                 padding: 6px;
             }
         }
+    
         @media (max-width: 768px) {
             body {
                 padding: 10px;
             }
+            
             .table-container {
                 margin: 10px 0;
                 border-radius: 8px;
             }
+            
             th, td {
                 padding: 8px 10px;
                 font-size: 12px;
             }
+            
             td input[type="number"] {
                 padding: 4px;
                 font-size: 12px;
             }
+            
             button {
                 padding: 10px 20px;
                 font-size: 14px;
             }
         }
+    
         @media (max-width: 480px) {
             body {
                 padding: 5px;
             }
+            
             h1 {
                 font-size: 24px;
             }
+            
             h2 {
                 font-size: 20px;
             }
+            
             .table-container {
                 margin: 5px 0;
                 border-radius: 6px;
             }
+            
             th, td {
                 padding: 6px 8px;
                 font-size: 11px;
             }
+            
             td input[type="number"] {
                 padding: 3px;
                 font-size: 11px;
             }
+            
             button {
                 padding: 8px 16px;
                 font-size: 13px;
             }
         }
-        #loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
-            z-index: 9999;
-        }
-        .spinner {
-            border: 6px solid rgba(255, 255, 255, 0.3);
-            border-top: 6px solid #fff;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
     </style>
+
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const form = document.getElementById("save-form");
-            const loadingOverlay = document.getElementById("loading-overlay");
-            if (form) {
-                form.addEventListener("submit", function () {
-                    loadingOverlay.style.display = "flex";
-                });
-            }
-        });
         function calculateRowTotal(rowId, currentMonth) {
             const pedido1 = parseFloat(document.getElementById(`pedido1-${rowId}`).value) || 0;
             const pedido2 = parseFloat(document.getElementById(`pedido2-${rowId}`).value) || 0;
             const sugeridoElement = document.getElementById(`sugerido-${rowId}-${currentMonth}`);
+
             if (!sugeridoElement) {
                 console.error(`No se encontró el elemento sugerido para rowId: ${rowId} y currentMonth: ${currentMonth}`);
                 return;
             }
+
             const sugerido = parseFloat(sugeridoElement.textContent) || 0;
             const total = pedido1 + pedido2;
+
             document.getElementById(`total-hidden-${rowId}`).value = total.toFixed(2);
             document.getElementById(`total-display-${rowId}`).textContent = total.toFixed(2);
+
             const totalCell = document.getElementById(`total-cell-${rowId}`);
             if (total >= sugerido) {
                 totalCell.style.backgroundColor = "#4caf50";
@@ -231,16 +231,14 @@
     </script>
 </head>
 <body>
-    <div id="loading-overlay" style="display: none;">
-        <div class="spinner"></div>
-        <p>Processing your request... Please wait.</p>
-    </div>
     <div class="container">
         <form action="/save" method="post" id="save-form">
             <h1>Analysis Result</h1>
+
             {% if message %}
                 <p>{{ message }}</p>
             {% endif %}
+
             {% if header_data %}
                 <h2>General Information</h2>
                 <div class="table-container">
@@ -258,6 +256,7 @@
                     </table>
                 </div>
             {% endif %}
+
             {% if grouped_data %}
                 {% for category, rows in grouped_data.items() %}
                     <h2>{{ category }}</h2>

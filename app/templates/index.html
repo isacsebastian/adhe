@@ -110,25 +110,8 @@
             }
         }
     </style>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const form = document.querySelector("form");
-            const loadingOverlay = document.getElementById("loading-overlay");
-
-            if (form) {
-                form.addEventListener("submit", function () {
-                    loadingOverlay.style.display = "flex";
-                });
-            }
-        });
-    </script>
 </head>
 <body>
-    <div id="loading-overlay" style="display: none;">
-        <div class="spinner"></div>
-        <p>Processing your request... Please wait.</p>
-    </div>
-    
     <form action="/analyze" method="post">
         <h1>Analyze Client Data</h1>
         <!-- Campo para ingresar el ID del Cliente -->

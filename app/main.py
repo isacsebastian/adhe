@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 UPLOAD_FOLDER = os.path.join('data', 'uploaded_files')
 RESULT_FOLDER = os.path.join('data', 'filtered_results')
-FILE_NAME = 'Basetest.xlsx'
+FILE_NAME = 'File.csv'
 file_path = os.path.join(UPLOAD_FOLDER, FILE_NAME)
 
 @app.route('/')
@@ -121,13 +121,13 @@ def analyze_client_data():
 
 @app.route('/save', methods=['POST'])
 def save_data():
-    """Guarda los valores ingresados de Pedido1, Pedido2 y Total en el archivo Excel."""
+    """Guarda los valores ingresados de Pedido1, Pedido2 y Total en el archivo CSV."""
     try:
         # Leer los datos enviados desde el formulario
         pedidos = request.form.to_dict()
 
-        # Leer el archivo Excel original
-        df = pd.read_excel(file_path)
+        # Leer el archivo CSV original
+        df = pd.read_csv(file_path)
 
         # Crear columnas para Pedido1, Pedido2 y Total si no existen
         if 'Pedido1' not in df.columns:
@@ -149,12 +149,13 @@ def save_data():
                 index = int(key.split('-')[1])
                 df.at[index, 'Total'] = float(value) if value else None
 
-        # Guardar los datos actualizados en el archivo Excel
-        df.to_excel(file_path, index=False)
+        # Guardar los datos actualizados en el archivo CSV
+        df.to_csv(file_path, index=False)
 
         return "Datos guardados exitosamente.", 200
     except Exception as e:
         return f"Error al guardar los datos: {e}", 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
