@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: adheplast
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app.main:app -b 0.0.0.0:5000"
