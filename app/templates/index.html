@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Data Filter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #ffffff;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        form {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            color: #333;
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #1e3c72;
+            color: #ffffff;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button:hover {
+            background-color: #2a5298;
+        }
+
+        /* Estilos responsivos */
+        @media (max-width: 768px) {
+            form {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.2rem;
+            }
+
+            button {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+
+            input[type="text"] {
+                font-size: 14px;
+                padding: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1rem;
+            }
+
+            button {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+
+            input[type="text"] {
+                font-size: 12px;
+                padding: 6px;
+            }
+
+            label {
+                font-size: 14px;
+            }
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const form = document.querySelector("form");
+            const loadingOverlay = document.getElementById("loading-overlay");
+
+            if (form) {
+                form.addEventListener("submit", function () {
+                    loadingOverlay.style.display = "flex";
+                });
+            }
+        });
+    </script>
+</head>
+<body>
+    <div id="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Processing your request... Please wait.</p>
+    </div>
+    
+    <form action="/analyze" method="post">
+        <h1>Analyze Client Data</h1>
+        <!-- Campo para ingresar el ID del Cliente -->
+        <label for="client_id">Enter Client ID:</label>
+        <input type="text" name="client_id" id="client_id" required>
+
+        <!-- Campo para ingresar el ID del Vendedor -->
+        <label for="vendedor">Enter Vendor ID:</label>
+        <input type="text" name="vendedor" id="vendedor" required>
+
+        <button type="submit">Analyze</button>
+    </form>
+</body>
+</html>
