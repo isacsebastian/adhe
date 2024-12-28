@@ -25,7 +25,8 @@ def analyze_client_data():
 
     try:
         # Leer el archivo Excel y forzar las columnas 'Cliente' y 'Vendedor' como cadenas
-        df = pd.read_excel(file_path, dtype={'Cliente': str, 'Vendedor': str})
+        df = pd.read_csv(file_path, dtype={'Cliente': str, 'Vendedor': str})
+
 
         # Normalizar los valores ingresados por el usuario
         client_id = str(client_id).strip()
