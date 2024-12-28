@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 UPLOAD_FOLDER = os.path.join('data', 'uploaded_files')
 RESULT_FOLDER = os.path.join('data', 'filtered_results')
-FILE_NAME = 'File.csv'
+FILE_NAME = 'Book.csv'
 file_path = os.path.join(UPLOAD_FOLDER, FILE_NAME)
 
 @app.route('/')
