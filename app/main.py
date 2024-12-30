@@ -9,7 +9,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = os.path.join('data', 'uploaded_files')
 RESULT_FOLDER = os.path.join('data', 'results')
 os.makedirs(RESULT_FOLDER, exist_ok=True)
-FILE_NAME = 'Book.csv'
+FILE_NAME = 'Base.csv'
 file_path = os.path.join(UPLOAD_FOLDER, FILE_NAME)
 
 @app.route('/')
