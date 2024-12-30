@@ -1,13 +1,14 @@
 from collections import defaultdict
 from datetime import datetime
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect, url_for
 import os
 import pandas as pd
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = os.path.join('data', 'uploaded_files')
-RESULT_FOLDER = os.path.join('data', 'filtered_results')
+RESULT_FOLDER = os.path.join('data', 'results')
+os.makedirs(RESULT_FOLDER, exist_ok=True)
 FILE_NAME = 'Book.csv'
 file_path = os.path.join(UPLOAD_FOLDER, FILE_NAME)
 
@@ -24,36 +25,24 @@ def analyze_client_data():
         return f"Error: File '{FILE_NAME}' not found in '{UPLOAD_FOLDER}'.", 404
 
     try:
-        # Leer el archivo Excel y forzar las columnas 'Cliente' y 'Vendedor' como cadenas
+        # Leer el archivo CSV
         df = pd.read_csv(file_path, dtype={'Cliente': str, 'Vendedor': str})
-
-
-        # Normalizar los valores ingresados por el usuario
         client_id = str(client_id).strip()
         vendedor = str(int(vendedor)).zfill(3)
-
-        # Normalizar los valores en el DataFrame
         df['Cliente'] = df['Cliente'].str.strip()
         df['Vendedor'] = df['Vendedor'].str.strip().str.zfill(3)
         df.columns = df.columns.str.strip()
 
-        # Verificar los nombres de las columnas
-        print("Nombres de las columnas en el DataFrame:")
-        print(df.columns.tolist())
-
-        # Filtrar las filas que coincidan con el cliente y el vendedor
         filtered_rows = df[(df['Cliente'] == client_id) & (df['Vendedor'] == vendedor)]
         if filtered_rows.empty:
             return render_template(
-                'result.html', 
-                message=f"No records found for Client ID: {client_id} and Vendedor: {vendedor}", 
+                'result.html',
+                message=f"No records found for Client ID: {client_id} and Vendedor: {vendedor}",
                 data=None
             )
 
-        # Obtener la primera fila (para Vendedor, Cliente, Nombre)
         first_row = filtered_rows.iloc[0][['Vendedor', 'Cliente', 'Nombre']].to_dict()
 
-        # Mapeo de meses en español
         month_mapping = {
             "January": "Enero",
             "February": "Febrero",
@@ -69,52 +58,27 @@ def analyze_client_data():
             "December": "Diciembre"
         }
 
-        # Obtener el mes actual en español
-        current_year = datetime.now().strftime("%y")  # Año corto, e.g., '25'
+        current_year = datetime.now().strftime("%y")
         current_month = f"{month_mapping[datetime.now().strftime('%B')]} {current_year}"
         month_columns = [f"{month_mapping[datetime.now().strftime('%B')]} 24", f"{month_mapping[datetime.now().strftime('%B')]} 25"]
-        
-        # Agrupar los datos por categoría
+
         grouped_data = defaultdict(list)
-        for _, row in filtered_rows.iterrows():
-            category = row['Categoria']
-            print(f"Categoría: {category}")
-            print(f"Filtrando meses: {month_columns}")
-            print("Datos antes de filtrar meses:")
-            print(row)
-
+        for index, row in filtered_rows.iterrows():
             row_dict = row.to_dict()
-            row_dict['Filtered Months'] = {
-                col: row[col] if col in row and pd.notnull(row[col]) else 0
-                for col in month_columns
-            }
-
-            # Verificar si todos los valores de 'Filtered Months' son 0 o NaN
-            if all(value == 0 for value in row_dict['Filtered Months'].values()):
-                continue  # Omitir esta fila si todos los valores son 0
-
-            # Agregar valores por defecto para las nuevas columnas
-            row_dict['pedido1'] = 0
-            row_dict['pedido2'] = 0
-            row_dict['total'] = 0
-
-            print("Meses filtrados (Filtered Months):")
-            print(row_dict['Filtered Months'])
-
-            grouped_data[category].append(row_dict)
-
-        # Imprimir datos enviados para depuración
-        print("Datos agrupados por categoría:")
-        for category, rows in grouped_data.items():
-            print(f"Categoría: {category}, Filas: {rows}")
+            row_dict['unique_id'] = f"{row['Categoria']}-{index}"  # ID único basado en categoría e índice
+            row_dict['Pedido1'] = row.get('Pedido1', 0)
+            row_dict['Pedido2'] = row.get('Pedido2', 0)
+            row_dict['Total'] = row_dict['Pedido1'] + row_dict['Pedido2']
+            row_dict['Filtered Months'] = {col: row[col] if col in row and pd.notnull(row[col]) else 0 for col in month_columns}
+            grouped_data[row['Categoria']].append(row_dict)
 
         return render_template(
-            'result.html', 
-            header_data=first_row, 
-            grouped_data=grouped_data, 
+            'result.html',
+            header_data=first_row,
+            grouped_data=grouped_data,
             message="Analysis successful!",
             month_columns=month_columns,
-            current_month=current_month  # Asegura que current_month esté disponible
+            current_month=current_month
         )
 
     except Exception as e:
@@ -122,41 +86,35 @@ def analyze_client_data():
 
 @app.route('/save', methods=['POST'])
 def save_data():
-    """Guarda los valores ingresados de Pedido1, Pedido2 y Total en el archivo CSV."""
     try:
-        # Leer los datos enviados desde el formulario
-        pedidos = request.form.to_dict()
+        form_data = request.form.to_dict()
 
-        # Leer el archivo CSV original
-        df = pd.read_csv(file_path)
+        output_data = []
 
-        # Crear columnas para Pedido1, Pedido2 y Total si no existen
-        if 'Pedido1' not in df.columns:
-            df['Pedido1'] = None
-        if 'Pedido2' not in df.columns:
-            df['Pedido2'] = None
-        if 'Total' not in df.columns:
-            df['Total'] = None
+        for key, value in form_data.items():
+            if key.startswith('pedido1-') or key.startswith('pedido2-'):
+                parts = key.split('-')
+                unique_id = parts[1]  # Obtenemos el identificador único
+                while len(output_data) <= len(output_data):
+                    output_data.append({'Unique ID': unique_id, 'Pedido1': 0, 'Pedido2': 0, 'Total': 0, 'Estado': '', 'Referencia': 0})
+                if key.startswith('pedido1-'):
+                    output_data[-1]['Pedido1'] = float(value) if value else 0
+                elif key.startswith('pedido2-'):
+                    output_data[-1]['Pedido2'] = float(value) if value else 0
 
-        # Actualizar el DataFrame con los valores recibidos
-        for key, value in pedidos.items():
-            if key.startswith('pedido1-'):
-                index = int(key.split('-')[1])
-                df.at[index, 'Pedido1'] = float(value) if value else None
-            elif key.startswith('pedido2-'):
-                index = int(key.split('-')[1])
-                df.at[index, 'Pedido2'] = float(value) if value else None
-            elif key.startswith('total-'):
-                index = int(key.split('-')[1])
-                df.at[index, 'Total'] = float(value) if value else None
+        for row in output_data:
+            row['Total'] = row['Pedido1'] + row['Pedido2']
+            referencia = float(row.get('Referencia', 0))
+            row['Estado'] = 'Mayor' if row['Total'] > referencia else 'Menor'
 
-        # Guardar los datos actualizados en el archivo CSV
-        df.to_csv(file_path, index=False)
+        output_df = pd.DataFrame(output_data)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file_path = os.path.join(RESULT_FOLDER, f"output_{timestamp}.xlsx")
+        output_df.to_excel(output_file_path, index=False)
 
-        return "Datos guardados exitosamente.", 200
+        return f"Datos guardados exitosamente en {output_file_path}", 200
     except Exception as e:
         return f"Error al guardar los datos: {e}", 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analysis Result</title>
-
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,231 +13,103 @@
             color: #fff;
             min-height: 100vh;
         }
-    
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 15px;
         }
-    
         h1, h2 {
             text-align: center;
             margin-bottom: 20px;
-            padding: 10px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
         }
-    
         .table-container {
             width: 100%;
             overflow-x: auto;
             margin: 20px 0;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            background: white;
         }
-    
         table {
-            border-collapse: separate;
-            border-spacing: 0;
+            border-collapse: collapse;
             width: 100%;
             background-color: #ffffff;
             color: #333;
-            font-size: 14px;
         }
-    
         th, td {
-            padding: 12px 15px;
+            padding: 10px;
             text-align: left;
             border-bottom: 1px solid #ddd;
-            white-space: nowrap;
         }
-    
         th {
             background-color: #1e3c72;
             color: #fff;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
-    
-        /* Bordes redondeados para la primera y última celda de la primera fila */
-        th:first-child {
-            border-top-left-radius: 10px;
-        }
-        
-        th:last-child {
-            border-top-right-radius: 10px;
-        }
-        
-        /* Bordes redondeados para la última fila */
-        tr:last-child td:first-child {
-            border-bottom-left-radius: 10px;
-        }
-        
-        tr:last-child td:last-child {
-            border-bottom-right-radius: 10px;
-        }
-    
-        td input[type="number"] {
+        input[type="number"] {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: all 0.3s ease;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
-    
-        td input[type="number"]:focus {
-            outline: none;
-            border-color: #2a5298;
-            box-shadow: 0 0 0 2px rgba(42, 82, 152, 0.2);
+        .total-cell {
+            font-weight: bold;
         }
-    
+        .green {
+            background-color: #4caf50;
+            color: #fff;
+        }
+        .red {
+            background-color: #f44336;
+            color: #fff;
+        }
         button {
             display: block;
             margin: 20px auto;
-            padding: 12px 24px;
+            padding: 10px 20px;
             background-color: #1e3c72;
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-    
         button:hover {
             background-color: #2a5298;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        }
-    
-        .no-data {
-            text-align: center;
-            margin: 40px 20px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            font-size: 18px;
-        }
-    
-        /* Estilos Responsivos */
-        @media (max-width: 1024px) {
-            body {
-                padding: 15px;
-            }
-            
-            th, td {
-                padding: 10px 12px;
-                font-size: 13px;
-            }
-            
-            td input[type="number"] {
-                padding: 6px;
-            }
-        }
-    
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            
-            .table-container {
-                margin: 10px 0;
-                border-radius: 8px;
-            }
-            
-            th, td {
-                padding: 8px 10px;
-                font-size: 12px;
-            }
-            
-            td input[type="number"] {
-                padding: 4px;
-                font-size: 12px;
-            }
-            
-            button {
-                padding: 10px 20px;
-                font-size: 14px;
-            }
-        }
-    
-        @media (max-width: 480px) {
-            body {
-                padding: 5px;
-            }
-            
-            h1 {
-                font-size: 24px;
-            }
-            
-            h2 {
-                font-size: 20px;
-            }
-            
-            .table-container {
-                margin: 5px 0;
-                border-radius: 6px;
-            }
-            
-            th, td {
-                padding: 6px 8px;
-                font-size: 11px;
-            }
-            
-            td input[type="number"] {
-                padding: 3px;
-                font-size: 11px;
-            }
-            
-            button {
-                padding: 8px 16px;
-                font-size: 13px;
-            }
         }
     </style>
-
     <script>
-        function calculateRowTotal(rowId, currentMonth) {
-            const pedido1 = parseFloat(document.getElementById(`pedido1-${rowId}`).value) || 0;
-            const pedido2 = parseFloat(document.getElementById(`pedido2-${rowId}`).value) || 0;
-            const sugeridoElement = document.getElementById(`sugerido-${rowId}-${currentMonth}`);
+        function updateTotal(rowId) {
+            const pedido1Input = document.getElementById(`pedido1-${rowId}`);
+            const pedido2Input = document.getElementById(`pedido2-${rowId}`);
+            const totalCell = document.getElementById(`total-${rowId}`);
+            const referenciaCell = document.getElementById(`referencia-${rowId}`);
 
-            if (!sugeridoElement) {
-                console.error(`No se encontró el elemento sugerido para rowId: ${rowId} y currentMonth: ${currentMonth}`);
-                return;
-            }
+            const pedido1 = parseFloat(pedido1Input.value) || 0;
+            const pedido2 = parseFloat(pedido2Input.value) || 0;
+            const referencia = parseFloat(referenciaCell.textContent) || 0;
 
-            const sugerido = parseFloat(sugeridoElement.textContent) || 0;
             const total = pedido1 + pedido2;
 
-            document.getElementById(`total-hidden-${rowId}`).value = total.toFixed(2);
-            document.getElementById(`total-display-${rowId}`).textContent = total.toFixed(2);
+            totalCell.textContent = total.toFixed(2);
 
-            const totalCell = document.getElementById(`total-cell-${rowId}`);
-            if (total >= sugerido) {
-                totalCell.style.backgroundColor = "#4caf50";
-                totalCell.style.color = "#fff";
+            if (total > referencia) {
+                totalCell.classList.remove('red');
+                totalCell.classList.add('green');
             } else {
-                totalCell.style.backgroundColor = "#f44336";
-                totalCell.style.color = "#fff";
+                totalCell.classList.remove('green');
+                totalCell.classList.add('red');
             }
         }
     </script>
 </head>
 <body>
     <div class="container">
-        <form action="/save" method="post" id="save-form">
+        <form action="/save" method="post">
             <h1>Analysis Result</h1>
-
+        
+            <!-- Mensaje de error o éxito -->
             {% if message %}
                 <p>{{ message }}</p>
             {% endif %}
-
+        
+            <!-- Información General del Cliente -->
             {% if header_data %}
                 <h2>General Information</h2>
                 <div class="table-container">
@@ -256,10 +127,11 @@
                     </table>
                 </div>
             {% endif %}
-
+        
+            <!-- Datos por Categoría -->
             {% if grouped_data %}
                 {% for category, rows in grouped_data.items() %}
-                    <h2>{{ category }}</h2>
+                    <h2>{{ category }} Diciembre</h2>
                     <div class="table-container">
                         <table>
                             <tr>
@@ -274,7 +146,6 @@
                                 <th>Pedido2</th>
                                 <th>Total</th>
                             </tr>
-                            {% set counter = 0 %}
                             {% for row in rows %}
                                 <tr>
                                     <td>{{ row['Material'] }}</td>
@@ -282,29 +153,41 @@
                                     <td>{{ row['Presentación'] }}</td>
                                     <td>{{ row['Embalaje'] }}</td>
                                     {% for month in month_columns %}
-                                        <td id="sugerido-{{ counter }}-{{ month }}">{{ row['Filtered Months'][month] }}</td>
+                                        <td id="referencia-{{ row['unique_id'] }}">{{ row['Filtered Months'][month] }}</td>
                                     {% endfor %}
                                     <td>
-                                        <input type="number" name="pedido1-{{ counter }}" id="pedido1-{{ counter }}" oninput="calculateRowTotal({{ counter }}, '{{ current_month }}')">
+                                        <input
+                                            type="number"
+                                            name="pedido1-{{ row['unique_id'] }}"
+                                            id="pedido1-{{ row['unique_id'] }}"
+                                            value="{{ row['Pedido1'] }}"
+                                            oninput="updateTotal('{{ row['unique_id'] }}')"
+                                        >
                                     </td>
                                     <td>
-                                        <input type="number" name="pedido2-{{ counter }}" id="pedido2-{{ counter }}" oninput="calculateRowTotal({{ counter }}, '{{ current_month }}')">
+                                        <input
+                                            type="number"
+                                            name="pedido2-{{ row['unique_id'] }}"
+                                            id="pedido2-{{ row['unique_id'] }}"
+                                            value="{{ row['Pedido2'] }}"
+                                            oninput="updateTotal('{{ row['unique_id'] }}')"
+                                        >
                                     </td>
-                                    <td id="total-cell-{{ counter }}">
-                                        <input type="hidden" name="total-{{ counter }}" id="total-hidden-{{ counter }}">
-                                        <span id="total-display-{{ counter }}">0.00</span>
+                                    <td class="total-cell" id="total-{{ row['unique_id'] }}">
+                                        {{ row['Total'] }}
                                     </td>
-                                    {% set counter = counter + 1 %}
                                 </tr>
                             {% endfor %}
                         </table>
                     </div>
                 {% endfor %}
-                <button type="submit">Guardar Datos</button>
             {% else %}
-                <p class="no-data">No data to display.</p>
+                <p>No data to display.</p>
             {% endif %}
+            <button type="submit">Guardar Datos</button>
         </form>
+        
+        
     </div>
 </body>
 </html>
