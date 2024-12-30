@@ -33,6 +33,7 @@ def analyze_client_data():
         df['Vendedor'] = df['Vendedor'].str.strip().str.zfill(3)
         df.columns = df.columns.str.strip()
 
+        # Filtrar filas del cliente y vendedor
         filtered_rows = df[(df['Cliente'] == client_id) & (df['Vendedor'] == vendedor)]
         if filtered_rows.empty:
             return render_template(
@@ -43,6 +44,7 @@ def analyze_client_data():
 
         first_row = filtered_rows.iloc[0][['Vendedor', 'Cliente', 'Nombre']].to_dict()
 
+        # Mapeo de meses en español
         month_mapping = {
             "January": "Enero",
             "February": "Febrero",
@@ -58,18 +60,27 @@ def analyze_client_data():
             "December": "Diciembre"
         }
 
+        # Columnas del mes actual
         current_year = datetime.now().strftime("%y")
         current_month = f"{month_mapping[datetime.now().strftime('%B')]} {current_year}"
         month_columns = [f"{month_mapping[datetime.now().strftime('%B')]} 24", f"{month_mapping[datetime.now().strftime('%B')]} 25"]
 
         grouped_data = defaultdict(list)
         for index, row in filtered_rows.iterrows():
+            # Excluir filas donde Diciembre 24 y Diciembre 25 sean 0 o NaN
+            if row[month_columns].fillna(0).sum() == 0:
+                continue
+
+            # Preparar los datos para la fila
             row_dict = row.to_dict()
             row_dict['unique_id'] = f"{row['Categoria']}-{index}"  # ID único basado en categoría e índice
             row_dict['Pedido1'] = row.get('Pedido1', 0)
             row_dict['Pedido2'] = row.get('Pedido2', 0)
             row_dict['Total'] = row_dict['Pedido1'] + row_dict['Pedido2']
-            row_dict['Filtered Months'] = {col: row[col] if col in row and pd.notnull(row[col]) else 0 for col in month_columns}
+            row_dict['Filtered Months'] = {
+                col: row[col] if col in row and pd.notnull(row[col]) else 0
+                for col in month_columns
+            }
             grouped_data[row['Categoria']].append(row_dict)
 
         return render_template(
