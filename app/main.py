@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, send_from_directory
 import os
 import pandas as pd
 
@@ -9,6 +9,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = os.path.join('data', 'uploaded_files')
 RESULT_FOLDER = os.path.join('data', 'results')
 os.makedirs(RESULT_FOLDER, exist_ok=True)
+
 FILE_NAME = 'Base.csv'
 file_path = os.path.join(UPLOAD_FOLDER, FILE_NAME)
 
@@ -26,7 +27,11 @@ def analyze_client_data():
 
     try:
         # Leer el archivo CSV
+        print("[DEBUG] Leyendo el archivo CSV...")
         df = pd.read_csv(file_path, dtype={'Cliente': str, 'Vendedor': str})
+        print("[DEBUG] CSV cargado:")
+        print(df.head())
+
         client_id = str(client_id).strip()
         vendedor = str(int(vendedor)).zfill(3)
         df['Cliente'] = df['Cliente'].str.strip()
@@ -35,6 +40,9 @@ def analyze_client_data():
 
         # Filtrar filas del cliente y vendedor
         filtered_rows = df[(df['Cliente'] == client_id) & (df['Vendedor'] == vendedor)]
+        print("[DEBUG] Filtrado de filas:")
+        print(filtered_rows)
+
         if filtered_rows.empty:
             return render_template(
                 'result.html',
@@ -83,11 +91,15 @@ def analyze_client_data():
             }
             grouped_data[row['Categoria']].append(row_dict)
 
+        print("[DEBUG] Datos agrupados por categoría:")
+        for category, rows in grouped_data.items():
+            print(f"- {category}: {rows}")
+
         return render_template(
             'result.html',
             header_data=first_row,
             grouped_data=grouped_data,
-            message="Analysis successful!",
+            message="Análisis Exitoso!",
             month_columns=month_columns,
             current_month=current_month
         )
@@ -95,37 +107,32 @@ def analyze_client_data():
     except Exception as e:
         return f"An error occurred: {e}", 500
 
-@app.route('/save', methods=['POST'])
-def save_data():
+@app.route('/download_excel', methods=['POST'])
+def download_excel():
     try:
-        form_data = request.form.to_dict()
+        # Obtener datos procesados enviados desde el frontend
+        data = request.form.getlist('data[]')
+        processed_data = [eval(row) for row in data]  # Convertir las cadenas JSON a diccionarios
 
-        output_data = []
+        print("[DEBUG] Datos procesados recibidos para el Excel:")
+        print(processed_data)
 
-        for key, value in form_data.items():
-            if key.startswith('pedido1-') or key.startswith('pedido2-'):
-                parts = key.split('-')
-                unique_id = parts[1]  # Obtenemos el identificador único
-                while len(output_data) <= len(output_data):
-                    output_data.append({'Unique ID': unique_id, 'Pedido1': 0, 'Pedido2': 0, 'Total': 0, 'Estado': '', 'Referencia': 0})
-                if key.startswith('pedido1-'):
-                    output_data[-1]['Pedido1'] = float(value) if value else 0
-                elif key.startswith('pedido2-'):
-                    output_data[-1]['Pedido2'] = float(value) if value else 0
+        # Crear DataFrame para generar el archivo Excel
+        output_df = pd.DataFrame(processed_data)
 
-        for row in output_data:
-            row['Total'] = row['Pedido1'] + row['Pedido2']
-            referencia = float(row.get('Referencia', 0))
-            row['Estado'] = 'Mayor' if row['Total'] > referencia else 'Menor'
-
-        output_df = pd.DataFrame(output_data)
+        # Generar Excel
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file_path = os.path.join(RESULT_FOLDER, f"output_{timestamp}.xlsx")
+        output_file_name = f"export_{timestamp}.xlsx"
+        output_file_path = os.path.join(RESULT_FOLDER, output_file_name)
         output_df.to_excel(output_file_path, index=False)
+        print(f"[DEBUG] Archivo Excel generado: {output_file_path}")
 
-        return f"Datos guardados exitosamente en {output_file_path}", 200
+        return send_from_directory(RESULT_FOLDER, output_file_name, as_attachment=True)
+
     except Exception as e:
-        return f"Error al guardar los datos: {e}", 500
+        print(f"[ERROR] Error al generar el archivo Excel: {str(e)}")
+        return f"Guardado Exitosamente!{str(e)}", 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
