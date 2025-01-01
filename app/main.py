@@ -133,11 +133,12 @@ def download_excel():
         output_df.to_excel(output_file_path, index=False)
         print(f"[DEBUG] Archivo Excel generado: {output_file_path}")
 
-        return send_from_directory(RESULT_FOLDER, output_file_name, as_attachment=True)
+        # Redirigir a response.html
+        return render_template('response.html', message="Archivo Excel generado correctamente.")
 
     except Exception as e:
         print(f"[ERROR] Error al generar el archivo Excel: {str(e)}")
-        return f"Guardado Exitosamente!{str(e)}", 500
+        return render_template('response.html', message=f"Error al generar el archivo Excel: {str(e)}")
 
 @app.route('/generate_file', methods=['POST'])
 def generate_file():
@@ -146,7 +147,7 @@ def generate_file():
         data = request.form.get('data')
 
         if not data:
-            return "Error: No se recibieron datos para el archivo.", 400
+            return render_template('response.html', message="Error: No se recibieron datos para el archivo.")
 
         # Convertir datos JSON a DataFrame
         import json
@@ -166,11 +167,10 @@ def generate_file():
         output_file_path = os.path.join(RESULT_FOLDER, output_file)
         pdf.output(output_file_path)
 
-        # Enviar archivo al usuario
-        return send_from_directory(RESULT_FOLDER, output_file, as_attachment=True)
+        # Redirigir a response.html
+        return render_template('response.html', message="Archivo PDF generado correctamente.")
 
     except Exception as e:
-        return f"Error al generar el archivo: {e}", 500
-
+        return render_template('response.html', message=f"Error al generar el archivo: {e}")
 if __name__ == '__main__':
     app.run(debug=True)
