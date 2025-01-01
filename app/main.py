@@ -4,6 +4,8 @@ from flask import Flask, request, render_template, send_from_directory
 import os
 import pandas as pd
 
+from fpdf import FPDF  # Para generar PDFs
+
 app = Flask(__name__)
 
 UPLOAD_FOLDER = os.path.join('data', 'uploaded_files')
@@ -95,13 +97,17 @@ def analyze_client_data():
         for category, rows in grouped_data.items():
             print(f"- {category}: {rows}")
 
+        # Obtener las categorías únicas para la lista desplegable
+        unique_categories = sorted(df['Categoria'].dropna().unique())
+
         return render_template(
             'result.html',
             header_data=first_row,
             grouped_data=grouped_data,
             message="Análisis Exitoso!",
             month_columns=month_columns,
-            current_month=current_month
+            current_month=current_month,
+            categorias=unique_categories  # Enviar categorías únicas al frontend
         )
 
     except Exception as e:
@@ -133,6 +139,38 @@ def download_excel():
         print(f"[ERROR] Error al generar el archivo Excel: {str(e)}")
         return f"Guardado Exitosamente!{str(e)}", 500
 
+@app.route('/generate_file', methods=['POST'])
+def generate_file():
+    try:
+        # Recibir datos y formato
+        data = request.form.get('data')
+
+        if not data:
+            return "Error: No se recibieron datos para el archivo.", 400
+
+        # Convertir datos JSON a DataFrame
+        import json
+        data = json.loads(data)
+        df = pd.DataFrame(data)
+
+        # Generar archivo PDF
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"filtered_data_{timestamp}.pdf"
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+
+        for index, row in df.iterrows():
+            pdf.cell(200, 10, txt=str(row.to_dict()), ln=True)
+
+        output_file_path = os.path.join(RESULT_FOLDER, output_file)
+        pdf.output(output_file_path)
+
+        # Enviar archivo al usuario
+        return send_from_directory(RESULT_FOLDER, output_file, as_attachment=True)
+
+    except Exception as e:
+        return f"Error al generar el archivo: {e}", 500
 
 if __name__ == '__main__':
     app.run(debug=True)

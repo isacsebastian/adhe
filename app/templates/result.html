@@ -128,9 +128,26 @@
             }
 
         svg {
-            width: 20%; /* Ajusta el tamaño según lo necesites */
+            width: 75%; /* Ajusta el tamaño según lo necesites */
             height: auto;
         }
+
+        select, input {
+            width: 50%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            font-size: 16px;
+        }
+
+        .nuevo-producto {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
 
     </style>
     <script>
@@ -163,44 +180,46 @@
         <form action="/download_excel" method="post">
             <h1>Resultado de Pedidos</h1>
             <div class="center-container">
-                <?xml version="1.0" encoding="UTF-8"?>
-        <svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 163.16 85.34">
-        <defs>
+                    
+<div class="center-container">
+    <?xml version="1.0" encoding="UTF-8"?>
+    <svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 163.16 85.34">
+      <defs>
         <style>
           .cls-1 {
             fill: #e00613;
           }
-        
+    
           .cls-2 {
             fill: #005ca6;
           }
-        
+    
           .cls-3 {
             fill: #f08f00;
           }
-        
+    
           .cls-4 {
             fill: #91be1f;
           }
-        
+    
           .cls-5 {
             fill: #ffd200;
           }
-        
+    
           .cls-6 {
-            fill: #fff;
+            fill: #0057a3;
           }
-        
+    
           .cls-7 {
             fill: #921b80;
           }
-        
+    
           .cls-8 {
             fill: #009e97;
           }
         </style>
-        </defs>
-        <g id="Capa_1" data-name="Capa 1">
+      </defs>
+      <g id="Capa_1" data-name="Capa 1">
         <g>
           <g>
             <path class="cls-1" d="M42.04,58.17v15.53l-18.62-8.81v-6.72c0-5.13,4.18-9.31,9.31-9.31s9.32,4.18,9.32,9.31Z"/>
@@ -226,8 +245,11 @@
             <path class="cls-6" d="M159.95,9.46c0-.22.04-.42.11-.61.08-.19.19-.36.33-.5s.31-.26.5-.34c.2-.08.41-.13.66-.13s.45.04.65.13c.2.09.37.2.51.34.14.14.25.31.33.5.08.19.12.4.12.61s-.04.42-.12.61c-.08.19-.19.36-.33.5-.14.15-.31.26-.51.34-.2.08-.41.12-.65.12s-.46-.04-.66-.12c-.2-.08-.36-.2-.5-.34-.14-.14-.25-.31-.33-.5-.08-.19-.11-.4-.11-.61ZM160.3,9.46c0,.18.03.35.09.51.06.16.14.29.25.4.11.11.24.2.4.27.16.06.33.1.51.1s.36-.03.51-.1c.16-.06.29-.15.4-.27.11-.11.19-.25.25-.4.06-.15.09-.32.09-.51s-.03-.35-.09-.51c-.06-.16-.14-.29-.25-.4-.11-.11-.24-.2-.4-.27-.16-.06-.33-.1-.51-.1s-.36.03-.51.1c-.16.06-.29.15-.4.27-.11.11-.19.25-.25.4-.06.16-.09.32-.09.51ZM161.36,9.63v.51s-.1.01-.17.01c-.05,0-.09,0-.12-.03-.03-.02-.05-.06-.05-.12v-1.18c0-.06.05-.1.14-.11.06-.01.12-.02.17-.03.05,0,.11,0,.17,0,.2,0,.36.04.48.12.12.08.17.2.17.35,0,.11-.03.2-.09.27s-.14.12-.23.15l.36.45s-.03.06-.06.09-.07.04-.12.04c-.08,0-.15-.04-.21-.13l-.27-.4h-.17ZM161.56,9.37c.16,0,.24-.07.24-.22,0-.06-.03-.11-.08-.15-.05-.04-.12-.05-.2-.05-.03,0-.06,0-.09,0-.03,0-.05,0-.08,0v.41h.2Z"/>
           </g>
         </g>
-        </g>
-        </svg>
+      </g>
+    </svg>
+</div>
+
+
         </div>
             <!-- Mensaje de error o éxito -->
             {% if message %}
@@ -256,7 +278,7 @@
             <!-- Datos por Categoría -->
             {% if grouped_data %}
                 {% for category, rows in grouped_data.items() %}
-                    <h2>{{ category }} - Diciembre</h2>
+                    <h2>{{ category }} - Enero</h2>
                     <div class="table-container">
                         <table>
                             <tr>
@@ -308,9 +330,50 @@
                 {% endfor %}
             {% endif %}
 
+             <!-- Sección para agregar nuevo producto -->
+        <h2>Agregar Nuevo Producto</h2>
+       <div class="nuevo-producto"> 
+        <form action="/add_product" method="post">
+            <label for="categoria">Seleccione una categoría:</label>
+            <br>
+            <select name="categoria" id="categoria" required >
+                <!-- Opciones dinámicas generadas por el backend -->
+                {% for categoria in categorias %}
+                <option value="{{ categoria }}">{{ categoria }}</option>
+                {% endfor %}
+            </select>
+            
+            <label for="producto">Nombre del producto:</label>
+            
+            <input type="text" name="producto" id="producto" required style="width: 50%; border-radius: 20px;">
+            
+            <label for="cantidad">Cantidad:</label>
+            
+            <input type="number" name="cantidad" id="cantidad" required style="width: 50%; border-radius: 20px;">
+            
+            <button type="submit">Agregar Producto</button>
+        </form> 
+       </div>
             <button type="submit">Descargar Excel</button>
         </form>
+        <input type="hidden" name="data" value='{{ grouped_data | tojson }}'>
+
+            <h2>Exportar Datos</h2>
+            <div class="export-options">
+
+            <form action="/generate_file" method="post">
+                <input type="hidden" name="data" value="{{ grouped_data | tojson }}"> <!-- Enviar datos analizados -->
+                <label for="format">Seleccione el formato:</label>
+                <select name="format" id="format" required>
+                    <option value="pdf">PDF</option>
+                    <option value="excel">Excel</option>
+                    <option value="text">Texto</option>
+                </select>
+                <button type="submit">Generar Archivo</button>
+            </form>
+        </div>
+        
     </div>
 </body>
 </html>
-</html>
+
