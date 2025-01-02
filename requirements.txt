@@ -3,4 +3,3 @@ gunicorn
 pandas  
 openpyxl  
 fpdf
-tempfile
