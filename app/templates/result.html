@@ -120,17 +120,6 @@
             background: linear-gradient(135deg, #4caf50, #2a5298);
             transform: scale(1.05);
         }
-        .center-container {
-            display: flex;
-            justify-content: center; /* Centra horizontalmente */
-            align-items: center;    /* Centra verticalmente */
-            height: 20vh;          /* Altura completa del viewport */
-            }
-
-        svg {
-            width: 75%; /* Ajusta el tamaño según lo necesites */
-            height: auto;
-        }
 
         select, input {
             width: 50%;
@@ -148,39 +137,114 @@
             gap: 10px;
         }
 
-
-    </style>
-    <script>
-        function updateTotal(rowId) {
-            const pedido1Input = document.getElementById(`pedido1-${rowId}`);
-            const pedido2Input = document.getElementById(`pedido2-${rowId}`);
-            const totalCell = document.getElementById(`total-${rowId}`);
-            const referenciaCell = document.getElementById(`referencia-${rowId}`);
-
-            const pedido1 = parseFloat(pedido1Input.value) || 0;
-            const pedido2 = parseFloat(pedido2Input.value) || 0;
-            const referencia = parseFloat(referenciaCell.textContent) || 0;
-
-            const total = pedido1 + pedido2;
-
-            totalCell.textContent = total.toFixed(2);
-
-            if (total > referencia) {
-                totalCell.classList.remove('red');
-                totalCell.classList.add('green');
-            } else {
-                totalCell.classList.remove('green');
-                totalCell.classList.add('red');
-            }
+        .des-container{
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Centra horizontalmente */
+            align-items: center;    /* Centra verticalmente */
         }
-    </script>
+
+        .center-container {
+            display: flex;
+            justify-content: center; /* Centra horizontalmente */
+            align-items: center;    /* Centra verticalmente */
+            height: 30vh;          /* Altura completa del viewport */
+        }
+
+        svg {
+            width: 30%; /* Ajusta el tamaño según lo necesites */
+            height: auto;
+        }
+    </style>
+<script>
+    // Función para actualizar el total dinámicamente
+    function updateTotal(rowId) {
+        const pedido1Input = document.getElementById(`pedido1-${rowId}`);
+        const pedido2Input = document.getElementById(`pedido2-${rowId}`);
+        const totalCell = document.getElementById(`total-${rowId}`);
+        const referenciaCell = document.getElementById(`referencia-${rowId}`);
+
+        const pedido1 = parseFloat(pedido1Input.value) || 0;
+        const pedido2 = parseFloat(pedido2Input.value) || 0;
+        const referencia = parseFloat(referenciaCell.textContent) || 0;
+
+        const total = pedido1 + pedido2;
+
+        totalCell.textContent = total.toFixed(2);
+
+        if (total > referencia) {
+            totalCell.classList.remove('red');
+            totalCell.classList.add('green');
+        } else {
+            totalCell.classList.remove('green');
+            totalCell.classList.add('red');
+        }
+    }
+
+    // Función para cargar productos según la categoría seleccionada
+    function loadProducts() {
+        const categoria = document.getElementById("categoria").value;
+        const productoSelect = document.getElementById("producto");
+
+        productoSelect.innerHTML = '<option value="">Cargando productos...</option>';
+
+        fetch(`/products_by_category?categoria=${encodeURIComponent(categoria)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.products && data.products.length > 0) {
+                    productoSelect.innerHTML = '<option value="">Seleccione un producto</option>';
+                    data.products.forEach(product => {
+                        const option = document.createElement("option");
+                        option.value = product;
+                        option.textContent = product;
+                        productoSelect.appendChild(option);
+                    });
+                } else {
+                    productoSelect.innerHTML = '<option value="">No hay productos disponibles</option>';
+                }
+            })
+            .catch(error => {
+                console.error("Error al cargar productos:", error);
+                productoSelect.innerHTML = '<option value="">Error al cargar productos</option>';
+            });
+    }
+
+    // Manejador para el botón de descarga de CSV
+    document.querySelector("form[action='/download_filtered_data']").addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+
+        fetch('/download_filtered_data', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            } else {
+                return response.json().then(err => {
+                    throw new Error(err.error || "Error desconocido.");
+                });
+            }
+        })
+        .then(blob => {
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = 'filtered_data.csv';
+            link.click();
+        })
+        .catch(error => {
+            alert(`Error al descargar el archivo: ${error.message}`);
+        });
+    });
+</script>
+
 </head>
 <body>
     <div class="container">
-        <form action="/download_excel" method="post">
-            <h1>Resultado de Pedidos</h1>
-            <div class="center-container">
-                    
+        <h1>Resultado de Pedidos</h1>
+        
 <div class="center-container">
     <?xml version="1.0" encoding="UTF-8"?>
     <svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 163.16 85.34">
@@ -249,131 +313,115 @@
     </svg>
 </div>
 
+        {% if header_data %}
+            <h2>Información General</h2>
+            <div class="table-container">
+                <table>
+                    <tr>
+                        <th>Vendedor</th>
+                        <th>Cliente</th>
+                        <th>Nombre</th>
+                    </tr>
+                    <tr>
+                        <td>{{ header_data['Vendedor'] }}</td>
+                        <td>{{ header_data['Cliente'] }}</td>
+                        <td>{{ header_data['Nombre'] }}</td>
+                    </tr>
+                </table>
+            </div>
+        {% endif %}
 
-        </div>
-            <!-- Mensaje de error o éxito -->
-            {% if message %}
-                <p>{{ message }}</p>
-            {% endif %}
-
-            <!-- Información General del Cliente -->
-            {% if header_data %}
-                <h2>Información General</h2>
+        {% if grouped_data %}
+            {% for category, rows in grouped_data.items() %}
+                <h2>{{ category }} - Enero</h2>
                 <div class="table-container">
                     <table>
                         <tr>
-                            <th>Vendedor</th>
-                            <th>Cliente</th>
-                            <th>Nombre</th>
+                            <th>Material</th>
+                            <th>Descripción</th>
+                            <th>Presentación</th>
+                            <th>Embalaje</th>
+                            {% for month in month_columns %}
+                                <th>{{ month }}</th>
+                            {% endfor %}
+                            <th>Pedido1</th>
+                            <th>Pedido2</th>
+                            <th>Total</th>
                         </tr>
-                        <tr>
-                            <td>{{ header_data['Vendedor'] }}</td>
-                            <td>{{ header_data['Cliente'] }}</td>
-                            <td>{{ header_data['Nombre'] }}</td>
-                        </tr>
+                        {% for row in rows %}
+                            <tr>
+                                <td>{{ row['Material'] }}</td>
+                                <td>{{ row['Descripción'] }}</td>
+                                <td>{{ row['Presentación'] }}</td>
+                                <td>{{ row['Embalaje'] }}</td>
+                                {% for month in month_columns %}
+                                    <td id="referencia-{{ row['unique_id'] }}">{{ row['Filtered Months'][month] }}</td>
+                                {% endfor %}
+                                <td>
+                                    <input
+                                        type="number"
+                                        name="pedido1-{{ row['unique_id'] }}"
+                                        id="pedido1-{{ row['unique_id'] }}"
+                                        value="{{ row['Pedido1'] }}"
+                                        oninput="updateTotal('{{ row['unique_id'] }}')"
+                                    >
+                                </td>
+                                <td>
+                                    <input
+                                        type="number"
+                                        name="pedido2-{{ row['unique_id'] }}"
+                                        id="pedido2-{{ row['unique_id'] }}"
+                                        value="{{ row['Pedido2'] }}"
+                                        oninput="updateTotal('{{ row['unique_id'] }}')"
+                                    >
+                                </td>
+                                <td class="total-cell" id="total-{{ row['unique_id'] }}">
+                                    {{ row['Total'] }}
+                                </td>
+                            </tr>
+                        {% endfor %}
                     </table>
                 </div>
-            {% endif %}
-
-            <!-- Datos por Categoría -->
-            {% if grouped_data %}
-                {% for category, rows in grouped_data.items() %}
-                    <h2>{{ category }} - Enero</h2>
-                    <div class="table-container">
-                        <table>
-                            <tr>
-                                <th>Material</th>
-                                <th>Descripción</th>
-                                <th>Presentación</th>
-                                <th>Embalaje</th>
-                                {% for month in month_columns %}
-                                    <th>{{ month }}</th>
-                                {% endfor %}
-                                <th>Pedido1</th>
-                                <th>Pedido2</th>
-                                <th>Total</th>
-                            </tr>
-                            {% for row in rows %}
-                                <tr>
-                                    <td>{{ row['Material'] }}</td>
-                                    <td>{{ row['Descripción'] }}</td>
-                                    <td>{{ row['Presentación'] }}</td>
-                                    <td>{{ row['Embalaje'] }}</td>
-                                    {% for month in month_columns %}
-                                        <td id="referencia-{{ row['unique_id'] }}">{{ row['Filtered Months'][month] }}</td>
-                                    {% endfor %}
-                                    <td>
-                                        <input
-                                            type="number"
-                                            name="pedido1-{{ row['unique_id'] }}"
-                                            id="pedido1-{{ row['unique_id'] }}"
-                                            value="{{ row['Pedido1'] }}"
-                                            oninput="updateTotal('{{ row['unique_id'] }}')"
-                                        >
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            name="pedido2-{{ row['unique_id'] }}"
-                                            id="pedido2-{{ row['unique_id'] }}"
-                                            value="{{ row['Pedido2'] }}"
-                                            oninput="updateTotal('{{ row['unique_id'] }}')"
-                                        >
-                                    </td>
-                                    <td class="total-cell" id="total-{{ row['unique_id'] }}">
-                                        {{ row['Total'] }}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% endfor %}
-            {% endif %}
-
-             <!-- Sección para agregar nuevo producto -->
+            {% endfor %}
+        {% endif %}
+     
         <h2>Agregar Nuevo Producto</h2>
-       <div class="nuevo-producto"> 
-        <form action="/add_product" method="post">
-            <label for="categoria">Seleccione una categoría:</label>
-            <br>
-            <select name="categoria" id="categoria" required >
-                <!-- Opciones dinámicas generadas por el backend -->
-                {% for categoria in categorias %}
-                <option value="{{ categoria }}">{{ categoria }}</option>
-                {% endfor %}
-            </select>
-            
-            <label for="producto">Nombre del producto:</label>
-            
-            <input type="text" name="producto" id="producto" required style="width: 50%; border-radius: 20px;">
-            
-            <label for="cantidad">Cantidad:</label>
-            
-            <input type="number" name="cantidad" id="cantidad" required style="width: 50%; border-radius: 20px;">
-            
-            <button type="submit">Agregar Producto</button>
-        </form> 
-       </div>
-            <button type="submit">Descargar Excel</button>
-        </form>
-        <input type="hidden" name="data" value='{{ grouped_data | tojson }}'>
-
-            <h2>Exportar Datos</h2>
-            <div class="export-options">
-
-            <form action="/generate_file" method="post">
-                <input type="hidden" name="data" value="{{ grouped_data | tojson }}"> <!-- Enviar datos analizados -->
-                <label for="format">Seleccione el formato:</label>
-                <select name="format" id="format" required>
-                    <option value="pdf">PDF</option>
-                    <option value="excel">Excel</option>
-                    <option value="text">Texto</option>
-                </select>
-                <button type="submit">Generar Archivo</button>
-            </form>
-        </div>
+<div class="nuevo-producto">
+    <form action="/add_product" method="post">
+        <label for="categoria">Seleccione una categoría:</label>
+        <br>
+        <select name="categoria" id="categoria" required onchange="loadProducts()">
+            <option value="">Seleccione una categoría</option>
+            {% for categoria in categorias %}
+            <option value="{{ categoria }}">{{ categoria }}</option>
+            {% endfor %}
+        </select>
         
+        <label for="producto">Seleccione un producto:</label>
+        <br>
+        <select name="producto" id="producto" required>
+            <option value="">Seleccione una categoría primero</option>
+        </select>
+        
+        <label for="cantidad">Cantidad:</label>
+        <br>
+        <input type="number" name="cantidad" id="cantidad" required>
+        
+        <br><br>
+        <button type="submit">Agregar Producto</button>
+    </form>
+</div>
+<div class="des-container">
+    <form action="/download_filtered_data" method="post">
+        <label for="client_id">Cliente ID:</label>
+        <input type="text" name="client_id" value="{{ header_data['Cliente'] }}" readonly>
+        <br>
+        <label for="vendedor">Vendedor ID:</label>
+        <input type="text" name="vendedor" value="{{ header_data['Vendedor'] }}" readonly>
+        <button type="submit">Descargar CSV Filtrado</button>
+    </form>
+</div>
+
     </div>
 </body>
 </html>
-

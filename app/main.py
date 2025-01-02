@@ -1,10 +1,10 @@
 from collections import defaultdict
 from datetime import datetime
-from flask import Flask, request, render_template, send_from_directory
+from flask import Flask, request, render_template, jsonify, send_file
 import os
 import pandas as pd
-
-from fpdf import FPDF  # Para generar PDFs
+import tempfile
+from flask import redirect, url_for
 
 app = Flask(__name__)
 
@@ -23,6 +23,9 @@ def index():
 def analyze_client_data():
     client_id = request.form.get('client_id')
     vendedor = request.form.get('vendedor')
+
+    if not client_id or not vendedor:
+        return render_template('index.html', error="Los campos Cliente ID y Vendedor ID son obligatorios.")
 
     if not os.path.exists(file_path):
         return f"Error: File '{FILE_NAME}' not found in '{UPLOAD_FOLDER}'.", 404
@@ -46,11 +49,7 @@ def analyze_client_data():
         print(filtered_rows)
 
         if filtered_rows.empty:
-            return render_template(
-                'result.html',
-                message=f"No records found for Client ID: {client_id} and Vendedor: {vendedor}",
-                data=None
-            )
+            return render_template('result.html', message=f"No records found for Client ID: {client_id} and Vendedor: {vendedor}", data=None)
 
         first_row = filtered_rows.iloc[0][['Vendedor', 'Cliente', 'Nombre']].to_dict()
 
@@ -77,13 +76,13 @@ def analyze_client_data():
 
         grouped_data = defaultdict(list)
         for index, row in filtered_rows.iterrows():
-            # Excluir filas donde Diciembre 24 y Diciembre 25 sean 0 o NaN
+            # Excluir filas donde las columnas de los meses sean 0 o NaN
             if row[month_columns].fillna(0).sum() == 0:
                 continue
 
             # Preparar los datos para la fila
             row_dict = row.to_dict()
-            row_dict['unique_id'] = f"{row['Categoria']}-{index}"  # ID único basado en categoría e índice
+            row_dict['unique_id'] = f"{row['Categoria']}-{index}"
             row_dict['Pedido1'] = row.get('Pedido1', 0)
             row_dict['Pedido2'] = row.get('Pedido2', 0)
             row_dict['Total'] = row_dict['Pedido1'] + row_dict['Pedido2']
@@ -107,70 +106,110 @@ def analyze_client_data():
             message="Análisis Exitoso!",
             month_columns=month_columns,
             current_month=current_month,
-            categorias=unique_categories  # Enviar categorías únicas al frontend
+            categorias=unique_categories
         )
+
+    except ValueError as ve:
+        return render_template('index.html', error=f"Error en los datos de entrada: {ve}")
 
     except Exception as e:
         return f"An error occurred: {e}", 500
 
-@app.route('/download_excel', methods=['POST'])
-def download_excel():
+@app.route('/products_by_category', methods=['GET'])
+def products_by_category():
+    categoria = request.args.get('categoria')
+
+    if not categoria:
+        return jsonify({"error": "El campo categoría es obligatorio."}), 400
+
+    if not os.path.exists(file_path):
+        return jsonify({"error": f"File '{FILE_NAME}' not found in '{UPLOAD_FOLDER}'."}), 404
+
     try:
-        # Obtener datos procesados enviados desde el frontend
-        data = request.form.getlist('data[]')
-        processed_data = [eval(row) for row in data]  # Convertir las cadenas JSON a diccionarios
+        # Leer el archivo CSV
+        df = pd.read_csv(file_path)
 
-        print("[DEBUG] Datos procesados recibidos para el Excel:")
-        print(processed_data)
+        # Asegurarse de que las columnas clave estén presentes
+        if 'Categoria' not in df.columns or 'Descripción' not in df.columns:
+            return jsonify({"error": "Las columnas necesarias no están presentes en el archivo CSV."}), 400
 
-        # Crear DataFrame para generar el archivo Excel
-        output_df = pd.DataFrame(processed_data)
+        # Filtrar productos por categoría
+        filtered_products = df[df['Categoria'].str.strip() == categoria]['Descripción'].dropna().unique().tolist()
 
-        # Generar Excel
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file_name = f"export_{timestamp}.xlsx"
-        output_file_path = os.path.join(RESULT_FOLDER, output_file_name)
-        output_df.to_excel(output_file_path, index=False)
-        print(f"[DEBUG] Archivo Excel generado: {output_file_path}")
+        if not filtered_products:
+            return jsonify({"error": "No se encontraron productos para la categoría proporcionada."}), 404
 
-        # Redirigir a response.html
-        return render_template('response.html', message="Archivo Excel generado correctamente.")
+        # Devolver los productos como JSON
+        return jsonify({"products": filtered_products})
 
     except Exception as e:
-        print(f"[ERROR] Error al generar el archivo Excel: {str(e)}")
-        return render_template('response.html', message=f"Error al generar el archivo Excel: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/generate_file', methods=['POST'])
-def generate_file():
+from flask import redirect, url_for
+
+@app.route('/add_product', methods=['POST'])
+def add_product():
+    categoria = request.form.get('categoria')
+    producto = request.form.get('producto')
+    cantidad = request.form.get('cantidad')
+
+    if not categoria or not producto or not cantidad:
+        return render_template('response.html', message="Error: Todos los campos son obligatorios.")
+
     try:
-        # Recibir datos y formato
-        data = request.form.get('data')
+        # Simular guardar el producto (puedes agregar la lógica de guardado aquí)
+        print(f"[DEBUG] Producto agregado: Categoría={categoria}, Producto={producto}, Cantidad={cantidad}")
 
-        if not data:
-            return render_template('response.html', message="Error: No se recibieron datos para el archivo.")
+        # Renderizar response.html con un mensaje de éxito
+        return render_template('response.html', message=f"Producto '{producto}' agregado exitosamente a la categoría '{categoria}' con cantidad {cantidad}.")
+    except Exception as e:
+        # Manejar errores y renderizar response.html con un mensaje de error
+        return render_template('response.html', message=f"Error al agregar el producto: {e}")
 
-        # Convertir datos JSON a DataFrame
-        import json
-        data = json.loads(data)
-        df = pd.DataFrame(data)
+@app.route('/download_filtered_data', methods=['POST'])
+def download_filtered_data():
+    client_id = request.form.get('client_id')
+    vendedor = request.form.get('vendedor')
 
-        # Generar archivo PDF
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = f"filtered_data_{timestamp}.pdf"
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
+    # Validar entrada
+    if not client_id or not vendedor:
+        return jsonify({"error": "Los campos Cliente y Vendedor son obligatorios."}), 400
 
-        for index, row in df.iterrows():
-            pdf.cell(200, 10, txt=str(row.to_dict()), ln=True)
+    if not os.path.exists(file_path):
+        return jsonify({"error": f"File '{FILE_NAME}' not found in '{UPLOAD_FOLDER}'."}), 404
 
-        output_file_path = os.path.join(RESULT_FOLDER, output_file)
-        pdf.output(output_file_path)
+    try:
+        # Leer el archivo CSV
+        df = pd.read_csv(file_path, dtype={'Cliente': str, 'Vendedor': str})
 
-        # Redirigir a response.html
-        return render_template('response.html', message="Archivo PDF generado correctamente.")
+        client_id = client_id.strip()
+        vendedor = str(int(vendedor)).zfill(3)
+        df['Cliente'] = df['Cliente'].str.strip()
+        df['Vendedor'] = df['Vendedor'].str.strip().str.zfill(3)
+
+        # Filtrar filas del cliente y vendedor
+        filtered_rows = df[(df['Cliente'] == client_id) & (df['Vendedor'] == vendedor)]
+
+        if filtered_rows.empty:
+            return jsonify({"error": "No records found to export."}), 404
+
+        # Guardar el archivo temporalmente y descargar directamente
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+            filtered_rows.to_csv(temp_file.name, index=False)
+            temp_file_path = temp_file.name
+
+        return send_file(
+            temp_file_path,
+            as_attachment=True,
+            download_name=f"filtered_data_{client_id}_{vendedor}.csv",
+            mimetype='text/csv'
+        )
+
+    except ValueError as ve:
+        return jsonify({"error": f"Error de validación: {ve}"}), 400
 
     except Exception as e:
-        return render_template('response.html', message=f"Error al generar el archivo: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
