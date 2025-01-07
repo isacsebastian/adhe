@@ -5,6 +5,9 @@ import os
 import pandas as pd
 import tempfile
 from flask import redirect, url_for
+import pdfkit
+import tempfile
+from fpdf import FPDF
 
 app = Flask(__name__)
 
@@ -166,6 +169,7 @@ def add_product():
         # Manejar errores y renderizar response.html con un mensaje de error
         return render_template('response.html', message=f"Error al agregar el producto: {e}")
 
+
 @app.route('/download_filtered_data', methods=['POST'])
 def download_filtered_data():
     client_id = request.form.get('client_id')
@@ -193,16 +197,75 @@ def download_filtered_data():
         if filtered_rows.empty:
             return jsonify({"error": "No records found to export."}), 404
 
-        # Guardar el archivo temporalmente y descargar directamente
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
-            filtered_rows.to_csv(temp_file.name, index=False)
-            temp_file_path = temp_file.name
+        # Seleccionar columnas específicas
+        selected_columns = ['Vendedor', 'Cliente', 'Categoria', 'Material', 'Descripción', 'Enero 24']
+        filtered_rows = filtered_rows[selected_columns]
 
+        # Crear el PDF con orientación horizontal
+        pdf = FPDF(orientation='L', unit='mm', format='A4')
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+
+        # Título del PDF
+        pdf.set_font("Arial", style="B", size=14)
+        pdf.cell(0, 10, f"Reporte de Datos Filtrados - Enero", ln=True, align="C")
+        pdf.ln(10)
+
+        # Información General
+        pdf.set_font("Arial", style="B", size=12)
+        pdf.cell(0, 10, "Información General", ln=True, align="L")
+        pdf.set_font("Arial", size=10)
+        pdf.cell(50, 10, f"Vendedor: {vendedor}", ln=True)
+        pdf.cell(50, 10, f"Cliente: {client_id}", ln=True)
+        pdf.ln(10)
+
+        # Datos Agrupados
+        pdf.set_font("Arial", style="B", size=12)
+        pdf.cell(0, 10, "Datos Filtrados", ln=True, align="L")
+        pdf.ln(5)
+
+        # Crear Tabla
+        pdf.set_font("Arial", style="B", size=10)
+        column_widths = [25, 25, 60, 30, 80, 20]  # Ajustes para optimizar espacio
+        headers = ['Vendedor', 'Cliente', 'Categoria', 'Material', 'Descripción', 'Enero 24']
+        for i, header in enumerate(headers):
+            pdf.cell(column_widths[i], 10, header, border=1, align="C")
+        pdf.ln()
+
+        # Agregar Filas
+        for _, row in filtered_rows.iterrows():
+            pdf.set_font("Arial", size=10)  # Tamaño estándar para columnas cortas
+            pdf.cell(column_widths[0], 10, str(row['Vendedor']), border=1, align="C")
+            pdf.cell(column_widths[1], 10, str(row['Cliente']), border=1, align="C")
+
+            # Columna "Categoría" con fuente más pequeña
+            pdf.set_font("Arial", size=8)
+            pdf.cell(column_widths[2], 10, str(row['Categoria']), border=1, align="L")
+
+            # Regresar a tamaño estándar
+            pdf.set_font("Arial", size=10)
+            pdf.cell(column_widths[3], 10, str(row['Material']), border=1, align="C")
+
+            # Columna "Descripción" con fuente más pequeña
+            pdf.set_font("Arial", size=8)
+            pdf.cell(column_widths[4], 10, str(row['Descripción']), border=1, align="L")
+
+            # Columna "Enero 24"
+            pdf.set_font("Arial", size=10)
+            pdf.cell(column_widths[5], 10, str(row['Enero 24']), border=1, align="C")
+            pdf.ln()
+
+        # Guardar el PDF temporalmente
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_pdf:
+            temp_pdf_path = temp_pdf.name
+            pdf.output(temp_pdf_path)
+
+        # Enviar el PDF como descarga
         return send_file(
-            temp_file_path,
+            temp_pdf_path,
             as_attachment=True,
-            download_name=f"filtered_data_{client_id}_{vendedor}.csv",
-            mimetype='text/csv'
+            download_name=f"Datos_Adheplast{client_id}_{vendedor}.pdf",
+            mimetype='application/pdf'
         )
 
     except ValueError as ve:
@@ -210,6 +273,7 @@ def download_filtered_data():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)

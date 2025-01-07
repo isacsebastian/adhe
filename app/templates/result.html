@@ -413,12 +413,12 @@
 </div>
 <div class="des-container">
     <form action="/download_filtered_data" method="post">
-        <label for="client_id">Cliente ID:</label>
-        <input type="text" name="client_id" value="{{ header_data['Cliente'] }}" readonly>
+        <label for="client_id" style="display: none;">Cliente ID:</label>
+        <input style="display: none;" type="text" name="client_id" value="{{ header_data['Cliente'] }}" readonly>
         <br>
-        <label for="vendedor">Vendedor ID:</label>
-        <input type="text" name="vendedor" value="{{ header_data['Vendedor'] }}" readonly>
-        <button type="submit">Descargar CSV Filtrado</button>
+        <label for="vendedor" style="display: none;">Vendedor ID:</label>
+        <input  style="display: none;" type="text" name="vendedor" value="{{ header_data['Vendedor'] }}" readonly>
+        <button type="submit">Descargar PDF Filtrado</button>
     </form>
 </div>
 
