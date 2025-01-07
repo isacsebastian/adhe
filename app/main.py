@@ -226,7 +226,7 @@ def download_filtered_data():
 
         # Crear Tabla
         pdf.set_font("Arial", style="B", size=10)
-        column_widths = [25, 25, 60, 30, 80, 20]  # Ajustes para optimizar espacio
+        column_widths = [25, 25, 70, 30, 85, 20]  # Ajustes para optimizar espacio
         headers = ['Vendedor', 'Cliente', 'Categoria', 'Material', 'Descripción', 'Enero 24']
         for i, header in enumerate(headers):
             pdf.cell(column_widths[i], 10, header, border=1, align="C")
