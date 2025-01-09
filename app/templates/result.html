@@ -157,6 +157,35 @@
             width: 20%; /* Ajusta el tamaño según lo necesites */
             height: auto;
         }
+
+        .buttons {
+            display: block;
+            width: 20%;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .button {
+            display: block;
+            margin: 20px auto;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #1e3c72, #4caf50);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s ease, background 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .button:hover {
+            background: linear-gradient(135deg, #4caf50, #2a5298);
+            transform: scale(1.05);
+        }
+        
     </style>
 </head>
 <body>
@@ -357,6 +386,11 @@
         <input  style="display: none;" type="text" name="vendedor" value="{{ header_data['Vendedor'] }}" readonly>
         <button type="submit">Descargar PDF Filtrado</button>
     </form>
+</div>
+
+<div class="buttons">
+    <a href="{{ url_for('response') }}" class="button">Guardar Datos</a>
+    <a href="{{ url_for('index') }}" class="button">Ir al Inicio</a>
 </div>
 
     </div>

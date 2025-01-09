@@ -312,5 +312,15 @@ def download_filtered_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/result')
+def result():
+    # Renderiza la página de resultados
+    return render_template('result.html')
+
+@app.route('/response')
+def response():
+    # Renderiza la página de respuesta
+    return render_template('response.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
