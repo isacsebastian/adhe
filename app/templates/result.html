@@ -123,7 +123,7 @@
         }
 
         select, input {
-            width: 50%;
+            width: 75%;
             padding: 10px;
             margin-bottom: 20px;
             border: 1px solid #ccc;
@@ -150,11 +150,11 @@
             display: flex;
             justify-content: center; /* Centra horizontalmente */
             align-items: center;    /* Centra verticalmente */
-            height: 30vh;          /* Altura completa del viewport */
+            height: 20vh;          /* Altura completa del viewport */
         }
 
         svg {
-            width: 30%; /* Ajusta el tamaño según lo necesites */
+            width: 20%; /* Ajusta el tamaño según lo necesites */
             height: auto;
         }
     </style>
@@ -435,7 +435,7 @@
             .then(blob => {
                 const link = document.createElement('a');
                 link.href = window.URL.createObjectURL(blob);
-                link.download = 'filtered_data.csv';
+                link.download = 'DatosAdheplast.csv';
                 link.click();
             })
             .catch(error => {

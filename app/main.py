@@ -187,7 +187,8 @@ def add_product():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
+    
 @app.route('/download_filtered_data', methods=['POST'])
 def download_filtered_data():
     client_id = request.form.get('client_id')
@@ -215,25 +216,34 @@ def download_filtered_data():
         if filtered_rows.empty:
             return jsonify({"error": "No records found to export."}), 404
 
-        # Validar que las columnas requeridas estén presentes
-        required_columns = ['Vendedor', 'Cliente', 'Categoria', 'Material', 'Descripcion']
+        # Filtrar valores 0 o NaN
+        month_column = datetime.now().strftime("%b") + "-24"
+        required_columns = ['Vendedor', 'Cliente', 'Categoria', 'Material', 'Descripcion', month_column]
         missing_columns = [col for col in required_columns if col not in filtered_rows.columns]
         if missing_columns:
             return jsonify({"error": f"Columnas faltantes en el archivo: {missing_columns}"}), 400
 
-        # Seleccionar columnas específicas
-        selected_columns = required_columns + [datetime.now().strftime("%b") + "-24"]
-        filtered_rows = filtered_rows[selected_columns]
+        # Filtrar filas con valores 0 o NaN en el mes actual
+        filtered_rows[month_column] = pd.to_numeric(filtered_rows[month_column], errors='coerce')
+        filtered_rows = filtered_rows[filtered_rows[month_column] > 0]
 
-        # Crear el PDF con orientación horizontal
+        if filtered_rows.empty:
+            return jsonify({"error": "No hay datos válidos después del filtrado."}), 404
+
+        # Obtener productos nuevos desde la sesión
+        new_products = session.get('productos', [])
+
+        # Crear el PDF
         pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
         pdf.set_font("Arial", size=12)
 
+        # Encabezado principal
         pdf.set_font("Arial", style="B", size=14)
-        pdf.cell(0, 10, f"Reporte de Datos Filtrados - Enero", ln=True, align="C")
+        pdf.cell(0, 10, f"Reporte de Datos Filtrados - {datetime.now().strftime('%B %Y')}", ln=True, align="C")
         pdf.ln(10)
 
+        # Información general
         pdf.set_font("Arial", style="B", size=12)
         pdf.cell(0, 10, "Información General", ln=True, align="L")
         pdf.set_font("Arial", size=10)
@@ -241,13 +251,14 @@ def download_filtered_data():
         pdf.cell(50, 10, f"Cliente: {client_id}", ln=True)
         pdf.ln(10)
 
+        # Tabla de datos filtrados
         pdf.set_font("Arial", style="B", size=12)
         pdf.cell(0, 10, "Datos Filtrados", ln=True, align="L")
         pdf.ln(5)
 
-        pdf.set_font("Arial", style="B", size=10)
         column_widths = [25, 25, 70, 30, 85, 20]
-        headers = ['Vendedor', 'Cliente', 'Categoria', 'Material', 'Descripcion', datetime.now().strftime("%b") + "-24"]
+        headers = ['Vendedor', 'Cliente', 'Categoria', 'Material', 'Descripcion', month_column]
+        pdf.set_font("Arial", style="B", size=10)
         for i, header in enumerate(headers):
             pdf.cell(column_widths[i], 10, header, border=1, align="C")
         pdf.ln()
@@ -256,20 +267,34 @@ def download_filtered_data():
             pdf.set_font("Arial", size=10)
             pdf.cell(column_widths[0], 10, str(row['Vendedor']), border=1, align="C")
             pdf.cell(column_widths[1], 10, str(row['Cliente']), border=1, align="C")
-
-            pdf.set_font("Arial", size=8)
             pdf.cell(column_widths[2], 10, str(row['Categoria']), border=1, align="L")
-
-            pdf.set_font("Arial", size=10)
             pdf.cell(column_widths[3], 10, str(row['Material']), border=1, align="C")
-
-            pdf.set_font("Arial", size=8)
             pdf.cell(column_widths[4], 10, str(row['Descripcion']), border=1, align="L")
-
-            pdf.set_font("Arial", size=10)
-            pdf.cell(column_widths[5], 10, str(row[datetime.now().strftime("%b") + "-24"]), border=1, align="C")
+            pdf.cell(column_widths[5], 10, f"{row[month_column]:.2f}", border=1, align="C")
             pdf.ln()
 
+        # Agregar tabla de productos nuevos
+        if new_products:
+            pdf.ln(10)
+            pdf.set_font("Arial", style="B", size=12)
+            pdf.cell(0, 10, "Productos Nuevos Agregados", ln=True, align="L")
+            pdf.ln(5)
+
+            column_widths = [70, 70, 30]
+            headers = ['Categoria', 'Producto', 'Cantidad']
+            pdf.set_font("Arial", style="B", size=10)
+            for i, header in enumerate(headers):
+                pdf.cell(column_widths[i], 10, header, border=1, align="C")
+            pdf.ln()
+
+            for product in new_products:
+                pdf.set_font("Arial", size=10)
+                pdf.cell(column_widths[0], 10, product['categoria'], border=1, align="L")
+                pdf.cell(column_widths[1], 10, product['producto'], border=1, align="L")
+                pdf.cell(column_widths[2], 10, str(product['cantidad']), border=1, align="C")
+                pdf.ln()
+
+        # Guardar y devolver el PDF
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_pdf:
             temp_pdf_path = temp_pdf.name
             pdf.output(temp_pdf_path)
@@ -277,7 +302,7 @@ def download_filtered_data():
         return send_file(
             temp_pdf_path,
             as_attachment=True,
-            download_name=f"Datos_Adheplast{client_id}_{vendedor}.pdf",
+            download_name=f"Datos_Adheplast_{client_id}_{vendedor}.pdf",
             mimetype='application/pdf'
         )
 
