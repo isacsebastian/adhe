@@ -156,90 +156,6 @@
             height: auto;
         }
     </style>
-<script>
-    // Función para actualizar el total dinámicamente
-    function updateTotal(rowId) {
-        const pedido1Input = document.getElementById(`pedido1-${rowId}`);
-        const pedido2Input = document.getElementById(`pedido2-${rowId}`);
-        const totalCell = document.getElementById(`total-${rowId}`);
-        const referenciaCell = document.getElementById(`referencia-${rowId}`);
-
-        const pedido1 = parseFloat(pedido1Input.value) || 0;
-        const pedido2 = parseFloat(pedido2Input.value) || 0;
-        const referencia = parseFloat(referenciaCell.textContent) || 0;
-
-        const total = pedido1 + pedido2;
-
-        totalCell.textContent = total.toFixed(2);
-
-        if (total > referencia) {
-            totalCell.classList.remove('red');
-            totalCell.classList.add('green');
-        } else {
-            totalCell.classList.remove('green');
-            totalCell.classList.add('red');
-        }
-    }
-
-    // Función para cargar productos según la categoría seleccionada
-    function loadProducts() {
-        const categoria = document.getElementById("categoria").value;
-        const productoSelect = document.getElementById("producto");
-
-        productoSelect.innerHTML = '<option value="">Cargando productos...</option>';
-
-        fetch(`/products_by_category?categoria=${encodeURIComponent(categoria)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.products && data.products.length > 0) {
-                    productoSelect.innerHTML = '<option value="">Seleccione un producto</option>';
-                    data.products.forEach(product => {
-                        const option = document.createElement("option");
-                        option.value = product;
-                        option.textContent = product;
-                        productoSelect.appendChild(option);
-                    });
-                } else {
-                    productoSelect.innerHTML = '<option value="">No hay productos disponibles</option>';
-                }
-            })
-            .catch(error => {
-                console.error("Error al cargar productos:", error);
-                productoSelect.innerHTML = '<option value="">Error al cargar productos</option>';
-            });
-    }
-
-    // Manejador para el botón de descarga de CSV
-    document.querySelector("form[action='/download_filtered_data']").addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        const formData = new FormData(e.target);
-
-        fetch('/download_filtered_data', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.blob();
-            } else {
-                return response.json().then(err => {
-                    throw new Error(err.error || "Error desconocido.");
-                });
-            }
-        })
-        .then(blob => {
-            const link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            link.download = 'filtered_data.csv';
-            link.click();
-        })
-        .catch(error => {
-            alert(`Error al descargar el archivo: ${error.message}`);
-        });
-    });
-</script>
-
 </head>
 <body>
     <div class="container">
@@ -386,34 +302,49 @@
             </div>
         {% endfor %}
     {% endif %}
-    
+   
     <h2>Agregar Nuevo Producto</h2>
+    <div class="nuevo-producto">
+        <form id="add-product-form" method="POST" action="/add_product">
+            <label for="categoria">Seleccione una categoría:</label>
+            <select name="categoria" id="categoria" required onchange="loadProducts()">
+                <option value="">Seleccione una categoría</option>
+                {% for categoria in categorias %}
+                <option value="{{ categoria }}">{{ categoria }}</option>
+                {% endfor %}
+            </select>
     
-<div class="nuevo-producto">
-    <form action="/add_product" method="post">
-        <label for="categoria">Seleccione una categoría:</label>
-        <br>
-        <select name="categoria" id="categoria" required onchange="loadProducts()">
-            <option value="">Seleccione una categoría</option>
-            {% for categoria in categorias %}
-            <option value="{{ categoria }}">{{ categoria }}</option>
-            {% endfor %}
-        </select>
-        
-        <label for="producto">Seleccione un producto:</label>
-        <br>
-        <select name="producto" id="producto" required>
-            <option value="">Seleccione una categoría primero</option>
-        </select>
-        
-        <label for="cantidad">Cantidad:</label>
-        <br>
-        <input type="number" name="cantidad" id="cantidad" required>
-        
-        <br><br>
-        <button type="submit">Agregar Producto</button>
-    </form>
-</div>
+            <label for="producto">Seleccione un producto:</label>
+            <select name="producto" id="producto" required>
+                <option value="">Seleccione una categoría primero</option>
+            </select>
+    
+            <label for="cantidad">Cantidad:</label>
+            <input type="number" name="cantidad" id="cantidad" required>
+    
+            <button type="submit">Agregar Producto</button>
+        </form>
+    </div>
+    
+    
+    <h2>Productos Agregados</h2>
+    <div class="table-container">
+        <table id="added-products-table">
+            <thead>
+                <tr>
+                    <th>Categoría</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="no-products">
+                    <td colspan="3">No se han agregado productos aún.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+       
 <div class="des-container">
     <form action="/download_filtered_data" method="post">
         <label for="client_id" style="display: none;">Cliente ID:</label>
@@ -426,5 +357,160 @@
 </div>
 
     </div>
+    <script>
+        // Función para actualizar el total dinámicamente
+        function updateTotal(rowId) {
+            const pedido1Input = document.getElementById(`pedido1-${rowId}`);
+            const pedido2Input = document.getElementById(`pedido2-${rowId}`);
+            const totalCell = document.getElementById(`total-${rowId}`);
+            const referenciaCell = document.getElementById(`referencia-${rowId}`);
+    
+            const pedido1 = parseFloat(pedido1Input.value) || 0;
+            const pedido2 = parseFloat(pedido2Input.value) || 0;
+            const referencia = parseFloat(referenciaCell.textContent) || 0;
+    
+            const total = pedido1 + pedido2;
+    
+            totalCell.textContent = total.toFixed(2);
+    
+            if (total > referencia) {
+                totalCell.classList.remove('red');
+                totalCell.classList.add('green');
+            } else {
+                totalCell.classList.remove('green');
+                totalCell.classList.add('red');
+            }
+        }
+    
+        // Función para cargar productos según la categoría seleccionada
+        function loadProducts() {
+            const categoria = document.getElementById("categoria").value;
+            const productoSelect = document.getElementById("producto");
+    
+            productoSelect.innerHTML = '<option value="">Cargando productos...</option>';
+    
+            fetch(`/products_by_category?categoria=${encodeURIComponent(categoria)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.products && data.products.length > 0) {
+                        productoSelect.innerHTML = '<option value="">Seleccione un producto</option>';
+                        data.products.forEach(product => {
+                            const option = document.createElement("option");
+                            option.value = product;
+                            option.textContent = product;
+                            productoSelect.appendChild(option);
+                        });
+                    } else {
+                        productoSelect.innerHTML = '<option value="">No hay productos disponibles</option>';
+                    }
+                })
+                .catch(error => {
+                    console.error("Error al cargar productos:", error);
+                    productoSelect.innerHTML = '<option value="">Error al cargar productos</option>';
+                });
+        }
+    
+        // Manejador para el botón de descarga de CSV
+        document.querySelector("form[action='/download_filtered_data']").addEventListener('submit', (e) => {
+            e.preventDefault();
+    
+            const formData = new FormData(e.target);
+    
+            fetch('/download_filtered_data', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(err => {
+                        throw new Error(err.error || "Error desconocido.");
+                    });
+                }
+            })
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = 'filtered_data.csv';
+                link.click();
+            })
+            .catch(error => {
+                alert(`Error al descargar el archivo: ${error.message}`);
+            });
+        });
+    
+        // Capturar el envío del formulario para agregar productos
+        document.addEventListener('DOMContentLoaded', () => {
+            const addProductForm = document.getElementById('add-product-form');
+    
+            addProductForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Evitar recargar la página
+    
+                // Validar datos del formulario
+                const categoria = document.getElementById('categoria').value;
+                const producto = document.getElementById('producto').value;
+                const cantidad = document.getElementById('cantidad').value;
+    
+                if (!categoria || !producto || cantidad <= 0) {
+                    alert('Por favor complete todos los campos correctamente.');
+                    return;
+                }
+    
+                const formData = new FormData(this);
+    
+                fetch('/add_product', {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addProductToTable(data); // Actualizar la tabla
+                    } else {
+                        alert(data.error || 'Error desconocido');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al agregar el producto.');
+                });
+            });
+        });
+    
+        // Función para agregar un producto a la tabla directamente
+        function addProductToTable(producto) {
+            const tbody = document.querySelector('#added-products-table tbody');
+    
+            // Eliminar la fila de "No se han agregado productos" si existe
+            const noProductsRow = document.getElementById('no-products');
+            if (noProductsRow) {
+                noProductsRow.remove();
+            }
+    
+            // Verificar si el producto ya está en la tabla
+            const existingRow = Array.from(tbody.rows).find(row =>
+                row.cells[0].innerText === producto.categoria &&
+                row.cells[1].innerText === producto.producto
+            );
+    
+            if (existingRow) {
+                // Si el producto ya existe, actualizamos la cantidad
+                const existingQuantity = parseInt(existingRow.cells[2].innerText, 10);
+                const newQuantity = existingQuantity + parseInt(producto.cantidad, 10);
+                existingRow.cells[2].innerText = newQuantity;
+            } else {
+                // Si no existe, agregar una nueva fila
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${producto.categoria}</td>
+                    <td>${producto.producto}</td>
+                    <td>${producto.cantidad}</td>
+                `;
+                tbody.appendChild(row);
+            }
+        }
+    </script>
+    
 </body>
 </html>

@@ -1,12 +1,13 @@
 from collections import defaultdict
 from datetime import datetime
-from flask import Flask, request, render_template, jsonify, send_file
+from flask import Flask, request, render_template, jsonify, send_file, redirect, url_for, session
 import os
 import pandas as pd
 import tempfile
 from fpdf import FPDF
 
 app = Flask(__name__)
+app.secret_key = "your_secret_key"
 
 UPLOAD_FOLDER = os.path.join('data', 'uploaded_files')
 RESULT_FOLDER = os.path.join('data', 'results')
@@ -18,7 +19,6 @@ file_path = os.path.join(UPLOAD_FOLDER, FILE_NAME)
 @app.route('/')
 def index():
     return render_template('index.html')
-
 @app.route('/analyze', methods=['POST'])
 def analyze_client_data():
     client_id = request.form.get('client_id')
@@ -83,13 +83,19 @@ def analyze_client_data():
         grouped_data = defaultdict(list)
         for index, row in filtered_rows.iterrows():
             # Preparar los datos para la fila
+            current_month_value = row.get(current_month, 0)
+            next_year_month_value = row.get(next_year_month, 0)
+
+            # Omitir si el valor del mes actual es 0 o NaN
+            if pd.isna(current_month_value) or current_month_value == 0:
+                continue
+
             row_dict = row.to_dict()
             row_dict['unique_id'] = f"{row['Categoria']}-{index}"
 
-            # Filtrar solo las columnas del mes actual
             row_dict['Filtered Months'] = {
-                current_month: row[current_month] if current_month in row else 0,
-                next_year_month: row[next_year_month] if next_year_month in row else 0
+                current_month: current_month_value,
+                next_year_month: next_year_month_value if not pd.isna(next_year_month_value) else 0
             }
 
             # Asegurarse de que Material, Descripcion, y Presentacion estén presentes
@@ -120,7 +126,6 @@ def analyze_client_data():
 
     except Exception as e:
         return f"An error occurred: {e}", 500
-
 
 @app.route('/products_by_category', methods=['GET'])
 def products_by_category():
@@ -155,20 +160,33 @@ def products_by_category():
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
+    # Obtener los datos enviados desde el formulario
     categoria = request.form.get('categoria')
     producto = request.form.get('producto')
     cantidad = request.form.get('cantidad')
 
+    # Validar los datos
     if not categoria or not producto or not cantidad:
-        return render_template('response.html', message="Error: Todos los campos son obligatorios.")
+        return jsonify({"error": "Todos los campos son obligatorios."}), 400
 
     try:
-        # Simular guardar el producto
-        print(f"[DEBUG] Producto agregado: Categoría={categoria}, Producto={producto}, Cantidad={cantidad}")
+        cantidad = int(cantidad)
+        if cantidad <= 0:
+            return jsonify({"error": "La cantidad debe ser mayor que 0."}), 400
 
-        return render_template('response.html', message=f"Producto '{producto}' agregado exitosamente a la categoría '{categoria}' con cantidad {cantidad}.")
+        # Devolver una respuesta para confirmar que se recibió correctamente
+        return jsonify({
+            "success": True,
+            "categoria": categoria,
+            "producto": producto,
+            "cantidad": cantidad
+        })
+
+    except ValueError:
+        return jsonify({"error": "La cantidad debe ser un número válido."}), 400
+
     except Exception as e:
-        return render_template('response.html', message=f"Error al agregar el producto: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/download_filtered_data', methods=['POST'])
 def download_filtered_data():
@@ -268,12 +286,6 @@ def download_filtered_data():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-@app.route('/success')
-def success():
-    # Renderiza la página de éxito
-    return render_template('response.html')
-
 
 if __name__ == '__main__':
     app.run(debug=True)
