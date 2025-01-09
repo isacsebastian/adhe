@@ -189,7 +189,6 @@ def add_product():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
- 
 @app.route('/download_filtered_data', methods=['POST'])
 def download_filtered_data():
     client_id = request.form.get('client_id')
@@ -300,19 +299,21 @@ def download_filtered_data():
             temp_pdf_path = temp_pdf.name
             pdf.output(temp_pdf_path)
 
-        return send_file(
+        response = make_response(send_file(
             temp_pdf_path,
             as_attachment=True,
             download_name=f"Datos_Adheplast_{client_id}_{vendedor}.pdf",
             mimetype='application/pdf'
-        )
+        ))
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f"attachment; filename=Datos_Adheplast_{client_id}_{vendedor}.pdf"
+        return response
 
     except ValueError as ve:
         return jsonify({"error": f"Error de validación: {ve}"}), 400
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 
 @app.route('/result')
