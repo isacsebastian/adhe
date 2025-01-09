@@ -1,10 +1,11 @@
 from collections import defaultdict
 from datetime import datetime
-from flask import Flask, request, render_template, jsonify, send_file, redirect, url_for, session
+from flask import Flask, request, render_template, jsonify, send_file, redirect, url_for, session, make_response
 import os
 import pandas as pd
 import tempfile
 from fpdf import FPDF
+
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -188,7 +189,8 @@ def add_product():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-    
+ 
+
 @app.route('/download_filtered_data', methods=['POST'])
 def download_filtered_data():
     client_id = request.form.get('client_id')
@@ -230,9 +232,6 @@ def download_filtered_data():
         if filtered_rows.empty:
             return jsonify({"error": "No hay datos válidos después del filtrado."}), 404
 
-        # Obtener productos nuevos desde la sesión
-        new_products = session.get('productos', [])
-
         # Crear el PDF
         pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
@@ -273,45 +272,28 @@ def download_filtered_data():
             pdf.cell(column_widths[5], 10, f"{row[month_column]:.2f}", border=1, align="C")
             pdf.ln()
 
-        # Agregar tabla de productos nuevos
-        if new_products:
-            pdf.ln(10)
-            pdf.set_font("Arial", style="B", size=12)
-            pdf.cell(0, 10, "Productos Nuevos Agregados", ln=True, align="L")
-            pdf.ln(5)
-
-            column_widths = [70, 70, 30]
-            headers = ['Categoria', 'Producto', 'Cantidad']
-            pdf.set_font("Arial", style="B", size=10)
-            for i, header in enumerate(headers):
-                pdf.cell(column_widths[i], 10, header, border=1, align="C")
-            pdf.ln()
-
-            for product in new_products:
-                pdf.set_font("Arial", size=10)
-                pdf.cell(column_widths[0], 10, product['categoria'], border=1, align="L")
-                pdf.cell(column_widths[1], 10, product['producto'], border=1, align="L")
-                pdf.cell(column_widths[2], 10, str(product['cantidad']), border=1, align="C")
-                pdf.ln()
-
-        # Guardar y devolver el PDF
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_pdf:
+        # Guardar el PDF en un archivo temporal
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+            pdf.output(temp_pdf.name)
             temp_pdf_path = temp_pdf.name
-            pdf.output(temp_pdf_path)
 
-        return send_file(
+        # Enviar el archivo PDF al cliente
+        response = make_response(send_file(
             temp_pdf_path,
             as_attachment=True,
             download_name=f"Datos_Adheplast_{client_id}_{vendedor}.pdf",
-            mimetype='application/pdf'
-        )
+            mimetype="application/pdf"
+        ))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
 
     except ValueError as ve:
         return jsonify({"error": f"Error de validación: {ve}"}), 400
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 @app.route('/result')
 def result():
     # Renderiza la página de resultados
