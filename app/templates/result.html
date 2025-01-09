@@ -87,19 +87,19 @@
         .total-cell {
             font-weight: bold;
             background-color: #e3e3e3;
-            border-radius: 20px;
+            border-radius: 0px;
         }
 
         .green {
             background-color: #4caf50;
             color: #fff;
-            border-radius: 20px;
+            border-radius: 0px;
         }
 
         .red {
             background-color: #f44336;
             color: #fff;
-            border-radius: 20px;
+            border-radius: 0px;
         }
 
         button {
@@ -332,60 +332,63 @@
         {% endif %}
 
         {% if grouped_data %}
-            {% for category, rows in grouped_data.items() %}
-                <h2>{{ category }} - Enero</h2>
-                <div class="table-container">
-                    <table>
-                        <tr>
-                            <th>Material</th>
-                            <th>Descripción</th>
-                            <th>Presentación</th>
-                            <th>Embalaje</th>
-                            {% for month in month_columns %}
-                                <th>{{ month }}</th>
-                            {% endfor %}
-                            <th>Pedido1</th>
-                            <th>Pedido2</th>
-                            <th>Total</th>
-                        </tr>
-                        {% for row in rows %}
-                            <tr>
-                                <td>{{ row['Material'] }}</td>
-                                <td>{{ row['Descripción'] }}</td>
-                                <td>{{ row['Presentación'] }}</td>
-                                <td>{{ row['Embalaje'] }}</td>
-                                {% for month in month_columns %}
-                                    <td id="referencia-{{ row['unique_id'] }}">{{ row['Filtered Months'][month] }}</td>
-                                {% endfor %}
-                                <td>
-                                    <input
-                                        type="number"
-                                        name="pedido1-{{ row['unique_id'] }}"
-                                        id="pedido1-{{ row['unique_id'] }}"
-                                        value="{{ row['Pedido1'] }}"
-                                        oninput="updateTotal('{{ row['unique_id'] }}')"
-                                    >
-                                </td>
-                                <td>
-                                    <input
-                                        type="number"
-                                        name="pedido2-{{ row['unique_id'] }}"
-                                        id="pedido2-{{ row['unique_id'] }}"
-                                        value="{{ row['Pedido2'] }}"
-                                        oninput="updateTotal('{{ row['unique_id'] }}')"
-                                    >
-                                </td>
-                                <td class="total-cell" id="total-{{ row['unique_id'] }}">
-                                    {{ row['Total'] }}
-                                </td>
-                            </tr>
+        {% for category, rows in grouped_data.items() %}
+            <h2>{{ category }} - Enero</h2>
+            <div class="table-container">
+                <table>
+                    <tr>
+                        <th>Material</th>
+                        <th>Descripción</th>
+                        <th>Presentación</th>
+                        <th>Embalaje</th>
+                        {% for month in month_columns %}
+                            <th>{{ month }}</th>
                         {% endfor %}
-                    </table>
-                </div>
-            {% endfor %}
-        {% endif %}
-     
-        <h2>Agregar Nuevo Producto</h2>
+                        <th>Pedido1</th>
+                        <th>Pedido2</th>
+                        <th>Total</th>
+                    </tr>
+                    {% for row in rows %}
+                        <tr>
+                            <td>{{ row['Material'] or 'N/A' }}</td>
+                            <td>{{ row['Descripcion'] or 'N/A' }}</td>
+                            <td>{{ row['Presentacion'] or 'N/A' }}</td>
+                            <td>{{ row['Embalaje'] or 'N/A' }}</td>
+                            {% for month in month_columns %}
+                                <td id="referencia-{{ row['unique_id'] }}">
+                                    {{ row['Filtered Months'][month] or 0 }}
+                                </td>
+                            {% endfor %}
+                            <td>
+                                <input
+                                    type="number"
+                                    name="pedido1-{{ row['unique_id'] }}"
+                                    id="pedido1-{{ row['unique_id'] }}"
+                                    value="{{ row['Pedido1'] or 0 }}"
+                                    oninput="updateTotal('{{ row['unique_id'] }}')"
+                                >
+                            </td>
+                            <td>
+                                <input
+                                    type="number"
+                                    name="pedido2-{{ row['unique_id'] }}"
+                                    id="pedido2-{{ row['unique_id'] }}"
+                                    value="{{ row['Pedido2'] or 0 }}"
+                                    oninput="updateTotal('{{ row['unique_id'] }}')"
+                                >
+                            </td>
+                            <td class="total-cell" id="total-{{ row['unique_id'] }}">
+                                {{ row['Total'] or 0 }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <h2>Agregar Nuevo Producto</h2>
+    
 <div class="nuevo-producto">
     <form action="/add_product" method="post">
         <label for="categoria">Seleccione una categoría:</label>

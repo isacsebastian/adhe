@@ -55,13 +55,49 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .success-message {
+            display: none;
+            color: #333;
+        }
+
+        .home-button {
+            display: none;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #1e3c72;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 16px;
+        }
+
+        .home-button:hover {
+            background-color: #163357;
+        }
     </style>
 </head>
 <body>
+    
     <div class="message-box">
         <h1>Guardado Exitosamente</h1>
-        <p>Redirigiendo al servidor...</p>
-        <div class="loader"></div>
+        <p id="status-message">Redirigiendo al servidor...</p>
+        <div id="loader" class="loader"></div>
+        <p id="success-message" class="success-message">Guardado en el Servidor exitosamente</p>
+        <a href="{{ url_for('index') }}" id="home-button" class="home-button">Ir a Inicio</a>
+
     </div>
+
+    <script>
+        // Mostrar el mensaje de éxito después de 7 segundos
+        setTimeout(() => {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('status-message').style.display = 'none';
+            document.getElementById('success-message').style.display = 'block';
+            document.getElementById('home-button').style.display = 'inline-block';
+        }, 4000); // 7 segundos en milisegundos
+    </script>
 </body>
 </html>
