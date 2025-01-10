@@ -91,7 +91,6 @@ def analyze_client_data():
 
     except Exception as e:
         return f"An error occurred: {e}", 500
-
 @app.route('/add_product', methods=['POST'])
 def add_product():
     categoria = request.form.get('categoria')
@@ -124,7 +123,7 @@ def add_product():
         factor = int(filtered_row.iloc[0, 10])  # Columna 10 para "Factor"
 
         if cantidad % factor != 0:
-            return jsonify({"error": f"La cantidad debe ser múltiplo de {factor}."}), 400
+            return jsonify({"error": f"El número debe ser múltiplo de {factor}."}), 400
 
         return jsonify({
             "success": True,
@@ -212,6 +211,11 @@ def download_filtered_data():
         pdf.cell(0, 10, f"Reporte de Datos Filtrados - {datetime.now().strftime('%B %Y')}", ln=True, align="C")
         pdf.ln(10)
 
+        # Insertar PNG en el encabezado
+        png_path = os.path.join('app', 'assets', 'Azul.png')
+        if os.path.exists(png_path):
+            pdf.image(png_path, x=10, y=8, w=30)  # Ajustar posición y tamaño del PNG
+
         pdf.set_font("Arial", style="B", size=12)
         pdf.cell(0, 10, "Información General", ln=True, align="L")
         pdf.set_font("Arial", size=10)
@@ -259,6 +263,7 @@ def download_filtered_data():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/result')
 def result():
