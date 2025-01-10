@@ -201,7 +201,6 @@ def download_filtered_data():
         return jsonify({"error": f"File '{FILE_NAME}' not found in '{UPLOAD_FOLDER}'."}), 404
 
     try:
-        # Leer el archivo CSV
         df = pd.read_csv(file_path, dtype={'Cliente': str, 'Vendedor': str})
         df.columns = df.columns.str.strip()
 
@@ -229,9 +228,6 @@ def download_filtered_data():
 
         if filtered_rows.empty:
             return jsonify({"error": "No hay datos válidos después del filtrado."}), 404
-
-        # Obtener productos nuevos desde la sesión (puedes adaptarlo a tu fuente de datos)
-        new_products = session.get('productos', [])
 
         # Crear el PDF
         pdf = FPDF(orientation='L', unit='mm', format='A4')
@@ -273,27 +269,6 @@ def download_filtered_data():
             pdf.cell(column_widths[5], 10, f"{row[month_column]:.2f}", border=1, align="C")
             pdf.ln()
 
-        # Agregar tabla de productos nuevos
-        if new_products:
-            pdf.ln(10)
-            pdf.set_font("Arial", style="B", size=12)
-            pdf.cell(0, 10, "Productos Nuevos Agregados", ln=True, align="L")
-            pdf.ln(5)
-
-            column_widths = [70, 70, 30]
-            headers = ['Categoria', 'Producto', 'Cantidad']
-            pdf.set_font("Arial", style="B", size=10)
-            for i, header in enumerate(headers):
-                pdf.cell(column_widths[i], 10, header, border=1, align="C")
-            pdf.ln()
-
-            for product in new_products:
-                pdf.set_font("Arial", size=10)
-                pdf.cell(column_widths[0], 10, product['categoria'], border=1, align="L")
-                pdf.cell(column_widths[1], 10, product['producto'], border=1, align="L")
-                pdf.cell(column_widths[2], 10, str(product['cantidad']), border=1, align="C")
-                pdf.ln()
-
         # Guardar y devolver el PDF
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_pdf:
             temp_pdf_path = temp_pdf.name
@@ -314,6 +289,7 @@ def download_filtered_data():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 @app.route('/result')
