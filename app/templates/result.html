@@ -17,6 +17,19 @@
             align-items: center;
         }
 
+        #result-container {
+            max-width: 100%;
+            width: 100%;
+
+            margin: 0 auto;
+            padding: 20px;
+            background: #ffffff;
+            color: #333;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            box-sizing: border-box;
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -181,47 +194,62 @@
             background: linear-gradient(135deg, #4caf50, #2a5298);
             transform: scale(1.05);
         }
-
         @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-                border-radius: 15px;
-            }
+    .container {
+        padding: 10px !important;
+        border-radius: 15px !important;
+    }
 
-            h1, h2 {
-                font-size: 1.5rem;
-            }
+    h1, h2 {
+        font-size: 1.5rem !important;
+    }
 
-            input[type="number"], select {
-                width: 90%;
-            }
+    input[type="number"], select {
+        width: 90% !important;
+    }
 
-            button {
-                width: 90%;
-                font-size: 14px;
-            }
+    button {
+        width: 90% !important;
+        font-size: 14px !important;
+    }
 
-            svg {
-                width: 50%;
-            }
-        }
+    svg {
+        width: 20% !important;
+    }
 
-        @media (max-width: 480px) {
-            h1, h2 {
-                font-size: 1.2rem;
-                margin-bottom: 10px;
-            }
+    table {
+        font-size: 12px !important;
+    }
 
-            button {
-                font-size: 12px;
-                padding: 10px 20px;
-            }
+    th, td {
+        padding: 8px !important;
+    }
+}
 
-            input[type="number"], select {
-                width: 100%;
-                font-size: 14px;
-            }
-        }
+@media (max-width: 480px) {
+    h1, h2 {
+        font-size: 1.2rem !important;
+        margin-bottom: 10px !important;
+    }
+
+    button {
+        font-size: 12px !important;
+        padding: 10px 20px !important;
+    }
+
+    input[type="number"], select {
+        width: 100% !important;
+        font-size: 14px !important;
+    }
+
+    table {
+        font-size: 10px !important;
+    }
+
+    th, td {
+        padding: 6px !important;
+    }
+}
 
     </style>
 </head>
@@ -231,7 +259,6 @@
         <h1>Resultado de Pedidos</h1>
 
         <div class="center-container">
-            <?xml version="1.0" encoding="UTF-8"?>
             <svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 163.16 85.34">
                 <defs>
                     <style>
@@ -385,7 +412,6 @@
         </div>
     </div>
 </div>
-
 <!-- Script -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -557,32 +583,37 @@ document.querySelector("form[action='/download_filtered_data']").addEventListene
         tbody.appendChild(row);
     }
 }
+
 document.getElementById('captureHtml').addEventListener('click', () => {
     const element = document.getElementById('result-container'); // Contenedor a capturar
 
-    // **Inyectar Estilos Temporales**
+    // **Inyectar Estilos Simulados de Escritorio**
     const style = document.createElement('style');
     style.id = 'capture-style'; // Añadir ID para identificar y eliminar después
     style.innerHTML = `
         body {
             background: white !important;
-            color: black;
-            font-size: 12px;
+            color: black !important;
+            font-size: 14px !important;
+            width: 100%;
+        }
+        .container {
+            width: 1200px !important; /* Ancho fijo para emular computadora */
+            margin: 0 auto !important;
+            padding: 20px !important;
+            background: white !important; /* Fondo blanco para la captura */
         }
         .buttons, .header, .footer, .nuevo-producto {
             display: none !important; /* Ocultar elementos no deseados */
-        }
-        .container {
-            margin: 0;
-            padding: 20px;
-            width: 100%;
-            background: white !important; /* Fondo blanco para la captura */
         }
     `;
     document.head.appendChild(style);
 
     // **Captura del contenido**
-    html2canvas(element, { scale: 2 }) // Aumentar resolución de la captura
+    html2canvas(element, {
+        scale: 2, // Aumentar resolución
+        windowWidth: 1200, // Emular ancho de escritorio
+    })
         .then(canvas => {
             const imgData = canvas.toDataURL('image/png'); // Imagen en formato PNG
             const pdf = new jspdf.jsPDF('p', 'mm', 'a4'); // Documento PDF A4
