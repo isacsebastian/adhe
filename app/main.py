@@ -280,38 +280,6 @@ def download_filtered_data():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-@app.route('/generate_pdf', methods=['POST'])
-def generate_pdf():
-    try:
-        # Obtén el HTML enviado desde el cliente
-        html_content = request.json.get('html')
-        filename = request.json.get('filename', 'documento')
-
-        if not html_content:
-            return jsonify({"error": "No se proporcionó HTML"}), 400
-
-        # Opcional: Validar longitud o estructura básica del HTML
-        if len(html_content) < 20:
-            return jsonify({"error": "El HTML proporcionado es demasiado corto"}), 400
-
-        # Llama al microservicio de generación de PDF
-        response = requests.post(
-            'http://localhost:3001/generate-pdf',
-            json={"html": html_content, "filename": filename}
-        )
-
-        if response.status_code == 200:
-            pdf = response.content
-            flask_response = make_response(pdf)
-            flask_response.headers['Content-Type'] = 'application/pdf'
-            flask_response.headers['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
-            return flask_response
-        else:
-            return jsonify({"error": response.json().get('error', 'Error desconocido')}), response.status_code
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 
 @app.route('/result')
 def result():
