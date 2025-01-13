@@ -5,6 +5,8 @@ import os
 import pandas as pd
 import tempfile
 from fpdf import FPDF
+import requests
+
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -91,6 +93,7 @@ def analyze_client_data():
 
     except Exception as e:
         return f"An error occurred: {e}", 500
+  
 @app.route('/add_product', methods=['POST'])
 def add_product():
     categoria = request.form.get('categoria')
@@ -101,7 +104,7 @@ def add_product():
         return jsonify({"error": "Todos los campos son obligatorios."}), 400
 
     if not os.path.exists(file_path):
-        return jsonify({"error": f"Archivo '{FILE_NAME}' no encontrado en la carpeta '{UPLOAD_FOLDER}'."}), 404
+        return jsonify({"error": f"Archivo '{FILE_NAME}' no encontrado en '{UPLOAD_FOLDER}'."}), 404
 
     try:
         cantidad = int(cantidad)
@@ -111,8 +114,10 @@ def add_product():
         df = pd.read_csv(file_path)
         df.columns = df.columns.str.strip()
 
-        if 'Categoria' not in df.columns or 'Descripcion' not in df.columns or 'Factor' not in df.columns:
-            return jsonify({"error": "El archivo CSV no contiene las columnas requeridas."}), 400
+        required_columns = ['Categoria', 'Descripcion', 'Factor', 'Material', 'Presentacion', 'Embalaje']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            return jsonify({"error": f"El archivo CSV no contiene las columnas requeridas: {missing_columns}"}), 400
 
         filtered_row = df[(df['Categoria'].str.strip() == categoria) & 
                           (df['Descripcion'].str.strip() == producto)]
@@ -120,17 +125,24 @@ def add_product():
         if filtered_row.empty:
             return jsonify({"error": "No se encontró un producto con la categoría y descripción proporcionadas."}), 404
 
-        factor = int(filtered_row.iloc[0, 10])  # Columna 10 para "Factor"
+        factor = int(filtered_row.iloc[0]['Factor'])
 
         if cantidad % factor != 0:
-            return jsonify({"error": f"El número debe ser múltiplo de {factor}."}), 400
+            return jsonify({"error": f"La cantidad debe ser múltiplo de {factor}."}), 400
+
+        material = filtered_row.iloc[0]['Material']
+        presentacion = filtered_row.iloc[0]['Presentacion']
+        embalaje = filtered_row.iloc[0]['Embalaje']
 
         return jsonify({
             "success": True,
             "categoria": categoria,
             "producto": producto,
             "cantidad": cantidad,
-            "factor": factor
+            "factor": factor,
+            "material": material,
+            "presentacion": presentacion,
+            "embalaje": embalaje
         })
 
     except ValueError:
@@ -138,6 +150,7 @@ def add_product():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/products_by_category', methods=['GET'])
 def products_by_category():
@@ -153,18 +166,22 @@ def products_by_category():
         df = pd.read_csv(file_path)
         df.columns = df.columns.str.strip()
 
-        if 'Categoria' not in df.columns or 'Descripcion' not in df.columns:
-            return jsonify({"error": "Las columnas necesarias no están presentes en el archivo CSV."}), 400
+        required_columns = ['Categoria', 'Descripcion', 'Material', 'Presentacion', 'Embalaje']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            return jsonify({"error": f"El archivo CSV no contiene las columnas requeridas: {missing_columns}"}), 400
 
-        filtered_products = df[df['Categoria'].str.strip() == categoria]['Descripcion'].dropna().unique().tolist()
+        filtered_products = df[df['Categoria'].str.strip() == categoria][['Descripcion', 'Material', 'Presentacion', 'Embalaje']].dropna()
 
-        if not filtered_products:
+        if filtered_products.empty:
             return jsonify({"error": "No se encontraron productos para la categoría proporcionada."}), 404
 
-        return jsonify({"products": filtered_products})
+        products = filtered_products.to_dict(orient='records')
+        return jsonify({"products": products})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/download_filtered_data', methods=['POST'])
 def download_filtered_data():
@@ -176,7 +193,7 @@ def download_filtered_data():
 
     if not os.path.exists(file_path):
         return jsonify({"error": f"File '{FILE_NAME}' not found in '{UPLOAD_FOLDER}'."}), 404
-
+      
     try:
         df = pd.read_csv(file_path, dtype={'Cliente': str, 'Vendedor': str})
         df.columns = df.columns.str.strip()
@@ -263,6 +280,37 @@ def download_filtered_data():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/generate_pdf', methods=['POST'])
+def generate_pdf():
+    try:
+        # Obtén el HTML enviado desde el cliente
+        html_content = request.json.get('html')
+        filename = request.json.get('filename', 'documento')
+
+        if not html_content:
+            return jsonify({"error": "No se proporcionó HTML"}), 400
+
+        # Opcional: Validar longitud o estructura básica del HTML
+        if len(html_content) < 20:
+            return jsonify({"error": "El HTML proporcionado es demasiado corto"}), 400
+
+        # Llama al microservicio de generación de PDF
+        response = requests.post(
+            'http://localhost:3001/generate-pdf',
+            json={"html": html_content, "filename": filename}
+        )
+
+        if response.status_code == 200:
+            pdf = response.content
+            flask_response = make_response(pdf)
+            flask_response.headers['Content-Type'] = 'application/pdf'
+            flask_response.headers['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
+            return flask_response
+        else:
+            return jsonify({"error": response.json().get('error', 'Error desconocido')}), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/result')
@@ -275,3 +323,4 @@ def response():
 
 if __name__ == '__main__':
     app.run(debug=True)
+

@@ -1,7 +1,28 @@
+# services:
+#   - type: web
+#     name: adheplast
+#     env: python
+#     plan: free
+#     buildCommand: "pip install -r requirements.txt"
+#     startCommand: "gunicorn app.main:app -b 0.0.0.0:5000 --timeout 120" 
+
 services:
   - type: web
     name: adheplast
     env: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn app.main:app -b 0.0.0.0:5000 --timeout 120" 
+    startCommand: "gunicorn app.main:app -b 0.0.0.0:5000 --timeout 120"
+    ports:
+      - "5000"
+
+  - type: web
+    name: pdf-service
+    env: node
+    buildCommand: "npm install"
+    startCommand: "node app.js"
+    ports:
+      - "3001"
+
+networks:
+  - name: adheplast-network
