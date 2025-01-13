@@ -4,6 +4,7 @@ pandas
 openpyxl  
 fpdf
 pdfkit
+requests
 
 
 
