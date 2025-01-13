@@ -25,6 +25,8 @@
             color: #333;
             border-radius: 20px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         h1, h2 {
@@ -72,7 +74,7 @@
         }
 
         input[type="number"] {
-            width: 50%;
+            width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 20px;
@@ -88,19 +90,16 @@
         .total-cell {
             font-weight: bold;
             background-color: #e3e3e3;
-            border-radius: 0px;
         }
 
         .green {
             background-color: #4caf50;
             color: #fff;
-            border-radius: 0px;
         }
 
         .red {
             background-color: #f44336;
             color: #fff;
-            border-radius: 0px;
         }
 
         button {
@@ -123,7 +122,7 @@
         }
 
         select, input {
-            width: 75%;
+            width: 100%;
             padding: 10px;
             margin-bottom: 20px;
             border: 1px solid #ccc;
@@ -135,39 +134,38 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             gap: 10px;
         }
 
-        .des-container{
+        .des-container {
             display: flex;
             flex-direction: column;
-            justify-content: center; /* Centra horizontalmente */
-            align-items: center;    /* Centra verticalmente */
+            justify-content: center;
+            align-items: center;
         }
 
         .center-container {
             display: flex;
-            justify-content: center; /* Centra horizontalmente */
-            align-items: center;    /* Centra verticalmente */
-            height: 20vh;          /* Altura completa del viewport */
+            justify-content: center;
+            align-items: center;
+            height: 20vh;
         }
 
         svg {
-            width: 20%; /* Ajusta el tamaño según lo necesites */
+            width: 100%;
+            max-width: 200px;
             height: auto;
         }
 
         .buttons {
-            display: block;
-            width: 20%;
-            align-items: center;
+            display: flex;
             justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .button {
-            display: block;
-            margin: 20px auto;
             padding: 12px 25px;
             background: linear-gradient(135deg, #1e3c72, #4caf50);
             color: #fff;
@@ -177,15 +175,54 @@
             font-size: 16px;
             transition: transform 0.2s ease, background 0.3s ease;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            justify-content: center;
-            align-items: center;
         }
 
         .button:hover {
             background: linear-gradient(135deg, #4caf50, #2a5298);
             transform: scale(1.05);
         }
-        
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+                border-radius: 15px;
+            }
+
+            h1, h2 {
+                font-size: 1.5rem;
+            }
+
+            input[type="number"], select {
+                width: 90%;
+            }
+
+            button {
+                width: 90%;
+                font-size: 14px;
+            }
+
+            svg {
+                width: 50%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1, h2 {
+                font-size: 1.2rem;
+                margin-bottom: 10px;
+            }
+
+            button {
+                font-size: 12px;
+                padding: 10px 20px;
+            }
+
+            input[type="number"], select {
+                width: 100%;
+                font-size: 14px;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -520,13 +557,12 @@ document.querySelector("form[action='/download_filtered_data']").addEventListene
         tbody.appendChild(row);
     }
 }
-
-
-    document.getElementById('captureHtml').addEventListener('click', () => {
+document.getElementById('captureHtml').addEventListener('click', () => {
     const element = document.getElementById('result-container'); // Contenedor a capturar
 
-    // **Inyectar Estilos Personalizados**
+    // **Inyectar Estilos Temporales**
     const style = document.createElement('style');
+    style.id = 'capture-style'; // Añadir ID para identificar y eliminar después
     style.innerHTML = `
         body {
             background: white !important;
@@ -544,13 +580,6 @@ document.querySelector("form[action='/download_filtered_data']").addEventListene
         }
     `;
     document.head.appendChild(style);
-
-    // **Ocultar dinámicamente las secciones**
-    const buttons = document.querySelector('.buttons');
-    const nuevoProducto = document.querySelector('.nuevo-producto');
-
-    if (buttons) buttons.style.visibility = 'hidden';
-    if (nuevoProducto) nuevoProducto.style.visibility = 'hidden';
 
     // **Captura del contenido**
     html2canvas(element, { scale: 2 }) // Aumentar resolución de la captura
@@ -577,23 +606,23 @@ document.querySelector("form[action='/download_filtered_data']").addEventListene
 
             // **Guardar PDF**
             pdf.save('resultado.pdf');
-
-            // **Restaurar Estilos y Visibilidad**
-            document.head.removeChild(style);
-            if (buttons) buttons.style.visibility = 'visible';
-            if (nuevoProducto) nuevoProducto.style.visibility = 'visible';
         })
         .catch(error => {
             console.error('Error al generar el PDF:', error);
             alert('No se pudo generar el PDF. Inténtalo de nuevo.');
+        })
+        .finally(() => {
+            // **Restaurar Estilos Originales**
+            const style = document.getElementById('capture-style');
+            if (style) document.head.removeChild(style);
 
-            // Restaurar estilos y visibilidad en caso de error
-            document.head.removeChild(style);
+            // Restaurar visibilidad de los elementos ocultos
+            const buttons = document.querySelector('.buttons');
+            const nuevoProducto = document.querySelector('.nuevo-producto');
             if (buttons) buttons.style.visibility = 'visible';
             if (nuevoProducto) nuevoProducto.style.visibility = 'visible';
         });
 });
-
 
 </script>
 
