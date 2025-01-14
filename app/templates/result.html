@@ -20,10 +20,9 @@
         #result-container {
             max-width: 100%;
             width: 100%;
-
             margin: 0 auto;
             padding: 20px;
-            background: #ffffff;
+            background:transparent;
             color: #333;
             border-radius: 20px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -349,31 +348,36 @@
         {% endif %}
         <div class="nuevo-producto">
             <h2>Agregar Nuevo Producto</h2>
-        
-            <form id="add-product-form" method="POST" action="/add_product">
-                <label for="categoria">Seleccione una categoría:</label>
-                <select name="categoria" id="categoria" required onchange="loadProducts()">
-                    <option value="">Seleccione una categoría</option>
-                    {% for categoria in categorias %}
-                    <option value="{{ categoria }}">{{ categoria }}</option>
-                    {% endfor %}
-                </select>
-                <br>
-        
-                <label for="producto">Seleccione un producto:</label>
-                <select name="producto" id="producto" required>
-                    <option value="">Seleccione una categoría primero</option>
-                </select>
-                <br>
-                <label for="cantidad">Cantidad:</label>
-                <input type="number" name="cantidad" id="cantidad" required>
-                <br>
-        
-                <button type="submit">Agregar Producto</button>
-            </form>
+
+<form id="add-product-form" method="POST" action="/add_product">
+    <label for="categoria">Seleccione una categoría:</label>
+    <select name="categoria" id="categoria" required onchange="loadProducts()">
+        <option value="">Seleccione una categoría</option>
+        {% for categoria in categorias %}
+        <option value="{{ categoria }}">{{ categoria }}</option>
+        {% endfor %}
+    </select>
+    <br>
+
+    <label for="producto">Seleccione un producto:</label>
+    <select name="producto" id="producto" required>
+        <option value="">Seleccione una categoría primero</option>
+    </select>
+    <br>
+
+    <label for="cantidad">Cantidad:</label>
+    <input type="number" name="cantidad" id="cantidad" required>
+    <br>
+
+    <!-- Campos ocultos para Cliente y Vendedor -->
+    <input type="hidden" name="client_id" value="{{ header_data['Cliente'] }}">
+    <input type="hidden" name="vendedor" value="{{ header_data['Vendedor'] }}">
+
+    <button type="submit">Agregar Producto</button>
+</form>
         </div>
         <div class="table-container">
-            <h2>Productos Agregados</h2>
+            <h2>Productos Extra</h2>
         
             <table id="added-products-table">
                 <thead>
@@ -393,7 +397,56 @@
                 </tbody>
             </table>
         </div>
-        
+
+        <h2 style="display: none;">Productos Asociados</h2>
+    <table border="1" cellpadding="5" cellspacing="0" style="display: none;">
+        <thead>
+        <tr>
+            <th>Categoría</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for product in products %}
+        <tr>
+            <td>{{ product['Categoria'] }}</td>
+            <td>{{ product['Descripcion'] }}</td>
+            <td>{{ product['Cantidad'] }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+<h2>Productos Agregados</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+    <thead>
+        <tr>
+            <th>Categoría</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Factor</th>
+            <th>Material</th>
+            <th>Presentación</th>
+            <th>Embalaje</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for product in products %}
+        <tr>
+            <td>{{ product['Categoria'] }}</td>
+            <td>{{ product['Descripcion'] }}</td>
+            <td>{{ product['Cantidad'] }}</td>
+            <td>{{ product['Factor'] }}</td>
+            <td>{{ product['Material'] }}</td>
+            <td>{{ product['Presentacion'] }}</td>
+            <td>{{ product['Embalaje'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
         <div class="des-container">
             <form action="/download_filtered_data" method="post">
                 <label for="client_id" style="display: none;">Cliente ID:</label>

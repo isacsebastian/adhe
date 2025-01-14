@@ -11,6 +11,21 @@ import requests
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 
+# Ruta del archivo de persistencia
+ADDED_PRODUCTS_FOLDER = os.path.join('data', 'added_products')
+ADDED_PRODUCTS_FILE = os.path.join(ADDED_PRODUCTS_FOLDER, 'added_products.csv')
+
+# Asegúrate de que la carpeta exista
+os.makedirs(ADDED_PRODUCTS_FOLDER, exist_ok=True)
+
+# Función para inicializar el archivo de persistencia
+def initialize_persistence_file():
+    if not os.path.exists(ADDED_PRODUCTS_FILE):
+        # Crear el archivo CSV con las columnas necesarias
+        pd.DataFrame(columns=[
+            'Cliente', 'Vendedor', 'Categoria', 'Descripcion', 'Cantidad', 'Factor', 'Material', 'Presentacion', 'Embalaje'
+        ]).to_csv(ADDED_PRODUCTS_FILE, index=False)
+
 UPLOAD_FOLDER = os.path.join('data', 'uploaded_files')
 RESULT_FOLDER = os.path.join('data', 'results')
 os.makedirs(RESULT_FOLDER, exist_ok=True)
@@ -34,7 +49,7 @@ def analyze_client_data():
         return f"Error: File '{FILE_NAME}' not found in '{UPLOAD_FOLDER}'.", 404
 
     try:
-        # Leer el archivo CSV
+        # Leer el archivo CSV principal
         df = pd.read_csv(file_path, dtype={'Cliente': str, 'Vendedor': str})
         df.columns = df.columns.str.strip()
 
@@ -82,67 +97,141 @@ def analyze_client_data():
 
         unique_categories = sorted(df['Categoria'].dropna().unique())
 
+        # Leer productos persistentes del archivo CSV
+        ADDED_PRODUCTS_FILE = os.path.join('data', 'added_products', 'added_products.csv')
+        if os.path.exists(ADDED_PRODUCTS_FILE):
+            added_df = pd.read_csv(ADDED_PRODUCTS_FILE, dtype=str)
+        else:
+            added_df = pd.DataFrame(columns=[
+                'Cliente', 'Vendedor', 'Categoria', 'Descripcion', 'Cantidad', 'Factor', 'Material', 'Presentacion', 'Embalaje'
+            ])
+
+        # Filtrar por cliente y vendedor
+        filtered_products = added_df[
+            (added_df['Cliente'] == client_id) & (added_df['Vendedor'] == vendedor)
+        ]
+
+        # Convertir los productos filtrados a una lista de diccionarios
+        products = filtered_products.to_dict(orient='records')
+
+
         return render_template(
             'result.html',
             header_data=first_row,
             grouped_data=grouped_data,
             message="Análisis Exitoso!",
             month_columns=[current_month, next_year_month],
-            categorias=unique_categories
+            categorias=unique_categories,
+            products=products  # Pasar productos persistentes a la plantilla
         )
 
     except Exception as e:
         return f"An error occurred: {e}", 500
-  
+
 @app.route('/add_product', methods=['POST'])
 def add_product():
+    ADDED_PRODUCTS_FOLDER = os.path.join('data', 'added_products')
+    ADDED_PRODUCTS_FILE = os.path.join(ADDED_PRODUCTS_FOLDER, 'added_products.csv')
+    os.makedirs(ADDED_PRODUCTS_FOLDER, exist_ok=True)
+
+    # Inicializar el archivo de persistencia si no existe
+    if not os.path.exists(ADDED_PRODUCTS_FILE):
+        pd.DataFrame(columns=['Cliente', 'Vendedor', 'Categoria', 'Descripcion', 'Cantidad', 'Factor', 'Material', 'Presentacion', 'Embalaje']) \
+          .to_csv(ADDED_PRODUCTS_FILE, index=False)
+
+    # Obtener datos del formulario
     categoria = request.form.get('categoria')
     producto = request.form.get('producto')
     cantidad = request.form.get('cantidad')
+    client_id = request.form.get('client_id')
+    vendedor = request.form.get('vendedor')
 
-    if not categoria or not producto or not cantidad:
-        return jsonify({"error": "Todos los campos son obligatorios."}), 400
+    # Validar los campos obligatorios
+    if not all([categoria, producto, cantidad, client_id, vendedor]):
+        return jsonify({"error": "Todos los campos son obligatorios. Verifica los datos ingresados."}), 400
 
     if not os.path.exists(file_path):
         return jsonify({"error": f"Archivo '{FILE_NAME}' no encontrado en '{UPLOAD_FOLDER}'."}), 404
 
     try:
+        # Validar que cantidad sea un número positivo
         cantidad = int(cantidad)
         if cantidad <= 0:
             return jsonify({"error": "La cantidad debe ser mayor que 0."}), 400
 
-        df = pd.read_csv(file_path)
+        # Leer el archivo CSV original
+        df = pd.read_csv(file_path, dtype=str, low_memory=False)
         df.columns = df.columns.str.strip()
 
+        # Validar columnas necesarias
         required_columns = ['Categoria', 'Descripcion', 'Factor', 'Material', 'Presentacion', 'Embalaje']
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             return jsonify({"error": f"El archivo CSV no contiene las columnas requeridas: {missing_columns}"}), 400
 
-        filtered_row = df[(df['Categoria'].str.strip() == categoria) & 
+        # Filtrar los datos según la categoría y descripción proporcionadas
+        filtered_row = df[(df['Categoria'].str.strip() == categoria) &
                           (df['Descripcion'].str.strip() == producto)]
 
         if filtered_row.empty:
             return jsonify({"error": "No se encontró un producto con la categoría y descripción proporcionadas."}), 404
 
+        # Obtener valores preestablecidos del archivo original
         factor = int(filtered_row.iloc[0]['Factor'])
-
-        if cantidad % factor != 0:
-            return jsonify({"error": f"La cantidad debe ser múltiplo de {factor}."}), 400
-
         material = filtered_row.iloc[0]['Material']
         presentacion = filtered_row.iloc[0]['Presentacion']
         embalaje = filtered_row.iloc[0]['Embalaje']
 
+        # Validar cantidad múltiplo del factor
+        if cantidad % factor != 0:
+            return jsonify({"error": f"La cantidad debe ser múltiplo de {factor}."}), 400
+
+        # Leer o inicializar el archivo de persistencia
+        if os.path.exists(ADDED_PRODUCTS_FILE) and os.path.getsize(ADDED_PRODUCTS_FILE) > 0:
+            added_df = pd.read_csv(ADDED_PRODUCTS_FILE, dtype=str)
+        else:
+            added_df = pd.DataFrame(columns=['Cliente', 'Vendedor', 'Categoria', 'Descripcion', 'Cantidad', 'Factor', 'Material', 'Presentacion', 'Embalaje'])
+
+        # Verificar si ya existe un registro para cliente, vendedor, categoría y producto
+        existing_row = added_df[(added_df['Cliente'].str.strip() == client_id) &
+                                (added_df['Vendedor'].str.strip() == vendedor) &
+                                (added_df['Categoria'].str.strip() == categoria) &
+                                (added_df['Descripcion'].str.strip() == producto)]
+
+        if not existing_row.empty:
+            # Actualizar cantidad existente
+            index = existing_row.index[0]
+            added_df.at[index, 'Cantidad'] = int(added_df.at[index, 'Cantidad']) + cantidad
+        else:
+            # Agregar un nuevo registro
+            new_row = {
+                'Cliente': client_id.strip(),
+                'Vendedor': vendedor.strip(),
+                'Categoria': categoria.strip(),
+                'Descripcion': producto.strip(),
+                'Cantidad': cantidad,
+                'Factor': factor,
+                'Material': material,
+                'Presentacion': presentacion,
+                'Embalaje': embalaje
+            }
+            added_df = pd.concat([added_df, pd.DataFrame([new_row])], ignore_index=True)
+
+        # Guardar los datos actualizados en el archivo de persistencia
+        added_df.to_csv(ADDED_PRODUCTS_FILE, index=False)
+
         return jsonify({
             "success": True,
+            "cliente": client_id,
+            "vendedor": vendedor,
             "categoria": categoria,
             "producto": producto,
             "cantidad": cantidad,
             "factor": factor,
             "material": material,
             "presentacion": presentacion,
-            "embalaje": embalaje
+            "embalaje": embalaje,
+            "message": "Producto agregado y persistido exitosamente."
         })
 
     except ValueError:
@@ -150,6 +239,7 @@ def add_product():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 @app.route('/products_by_category', methods=['GET'])
@@ -178,6 +268,32 @@ def products_by_category():
 
         products = filtered_products.to_dict(orient='records')
         return jsonify({"products": products})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/get_products', methods=['GET'])
+def get_products():
+    # Ruta del archivo de productos persistentes
+    ADDED_PRODUCTS_FILE = os.path.join('data', 'added_products', 'added_products.csv')
+
+    # Verificar si el archivo existe
+    if not os.path.exists(ADDED_PRODUCTS_FILE):
+        return jsonify({"error": "No hay productos persistentes almacenados."}), 404
+
+    try:
+        # Leer los productos del archivo CSV
+        added_df = pd.read_csv(ADDED_PRODUCTS_FILE, dtype=str)
+        
+        # Convertir a lista de diccionarios para enviarlo a la plantilla
+        products = added_df.to_dict(orient='records')
+
+        # Renderizar una plantilla con los productos
+        return render_template(
+            'result.html',  # Nueva plantilla para mostrar los productos
+            products=products
+        )
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
