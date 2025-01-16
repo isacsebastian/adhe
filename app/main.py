@@ -254,8 +254,13 @@ def add_product():
         embalaje = filtered_row.iloc[0]['Embalaje']
 
         # Validar cantidad múltiplo del factor
+        # En la función add_product
         if cantidad % factor != 0:
-            return jsonify({"error": f"La cantidad debe ser múltiplo de {factor}."}), 400
+            return jsonify({
+                "error": f"La cantidad debe ser múltiplo de {factor}. Por favor, ingrese un número que sea múltiplo de {factor}.",
+                "factor": factor
+            }), 400
+        
 
         # Leer o inicializar el archivo de persistencia
         if os.path.exists(ADDED_PRODUCTS_FILE) and os.path.getsize(ADDED_PRODUCTS_FILE) > 0:
@@ -327,12 +332,16 @@ def products_by_category():
         df = pd.read_csv(file_path)
         df.columns = df.columns.str.strip()
 
-        required_columns = ['Categoria', 'Descripcion', 'Material', 'Presentacion', 'Embalaje']
+        # Modificamos esta línea para incluir Factor
+        required_columns = ['Categoria', 'Descripcion', 'Material', 'Presentacion', 'Embalaje', 'Factor']
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             return jsonify({"error": f"El archivo CSV no contiene las columnas requeridas: {missing_columns}"}), 400
 
-        filtered_products = df[df['Categoria'].str.strip() == categoria][['Descripcion', 'Material', 'Presentacion', 'Embalaje']].dropna()
+        # Modificamos esta línea para incluir Factor en la selección
+        filtered_products = df[df['Categoria'].str.strip() == categoria][
+            ['Descripcion', 'Material', 'Presentacion', 'Embalaje', 'Factor']
+        ].dropna()
 
         if filtered_products.empty:
             return jsonify({"error": "No se encontraron productos para la categoría proporcionada."}), 404
@@ -342,7 +351,7 @@ def products_by_category():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-  
+    
 
 @app.route('/get_products', methods=['GET'])
 def get_products():
