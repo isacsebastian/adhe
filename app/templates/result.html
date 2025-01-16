@@ -193,6 +193,33 @@
             background: linear-gradient(135deg, #4caf50, #2a5298);
             transform: scale(1.05);
         }
+
+        .saved-order {
+        background-color: #e8f5e9 !important;
+        border: 2px solid #81c784 !important;
+        position: relative;
+    }
+
+    .saved-order::after {
+        content: "⚡";
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        font-size: 12px;
+        color: #2e7d32;
+    }
+
+    input.saved-order {
+        padding-right: 20px;
+    }
+
+    input.saved-order:focus {
+        border-color: #2e7d32 !important;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+    }
+
+    
         @media (max-width: 768px) {
     .container {
         padding: 10px !important;
@@ -459,10 +486,11 @@
         </div>
 
         <div class="buttons">
-            <a href="{{ url_for('response') }}" class="button">Guardar Datos</a>
             <a href="{{ url_for('index') }}" class="button">Ir al Inicio</a>
             <button id="captureHtml">Imprimir como PDF</button>
+            <button id="saveOrders" class="button">Guardar Pedidos</button>  
         </div>
+
     </div>
 </div>
 <!-- Script -->
@@ -706,6 +734,86 @@ document.getElementById('captureHtml').addEventListener('click', () => {
             if (buttons) buttons.style.visibility = 'visible';
             if (nuevoProducto) nuevoProducto.style.visibility = 'visible';
         });
+});
+
+// Agregar esta función después de las otras funciones JavaScript
+document.getElementById('saveOrders').addEventListener('click', function() {
+    // Recolectar todos los datos de pedidos
+    const orders = [];
+    const tables = document.querySelectorAll('.table-container table');
+    
+    tables.forEach(table => {
+        const rows = table.querySelectorAll('tr');
+        rows.forEach((row, index) => {
+            if (index === 0) return; // Saltar el encabezado
+            
+            const pedido1Input = row.querySelector('input[name^="pedido1-"]');
+            const pedido2Input = row.querySelector('input[name^="pedido2-"]');
+            
+            if (pedido1Input && pedido2Input) {
+                const material = row.cells[0].textContent;
+                const descripcion = row.cells[1].textContent;
+                const presentacion = row.cells[2].textContent;
+                const embalaje = row.cells[3].textContent;
+                const referencia = row.querySelector('[id^="referencia-"]').textContent;
+                const pedido1 = pedido1Input.value || '0';
+                const pedido2 = pedido2Input.value || '0';
+                const total = row.querySelector('[id^="total-"]').textContent;
+                const categoria = table.closest('.table-container').previousElementSibling.textContent.split('-')[0].trim();
+                
+                orders.push({
+                    categoria,
+                    material,
+                    descripcion,
+                    presentacion,
+                    embalaje,
+                    referencia: parseFloat(referencia),
+                    pedido1: parseFloat(pedido1),
+                    pedido2: parseFloat(pedido2),
+                    total: parseFloat(total)
+                });
+            }
+        });
+    });
+
+    // Verificar si hay pedidos para guardar
+    if (orders.length === 0) {
+        alert('No hay pedidos para guardar');
+        return;
+    }
+
+    // Obtener client_id y vendedor de los campos ocultos
+    const clientId = document.querySelector('input[name="client_id"]').value;
+    const vendedor = document.querySelector('input[name="vendedor"]').value;
+
+    // Enviar los datos al servidor
+    fetch('/save_orders', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            client_id: clientId,
+            vendedor: vendedor,
+            orders: orders
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Pedidos guardados exitosamente');
+            // Opcional: Agregar clase para indicar que los pedidos están guardados
+            document.querySelectorAll('input[name^="pedido"]').forEach(input => {
+                input.classList.add('saved-order');
+            });
+        } else {
+            alert('Error al guardar los pedidos: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al guardar los pedidos');
+    });
 });
 
 </script>

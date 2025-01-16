@@ -7,31 +7,36 @@ import tempfile
 from fpdf import FPDF
 import requests
 
-
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 
-# Ruta del archivo de persistencia
-ADDED_PRODUCTS_FOLDER = os.path.join('data', 'added_products')
+# Definición de todas las carpetas base
+BASE_DATA_DIR = 'data'
+UPLOAD_FOLDER = os.path.join(BASE_DATA_DIR, 'uploaded_files')
+RESULT_FOLDER = os.path.join(BASE_DATA_DIR, 'results')
+ORDERS_FOLDER = os.path.join(BASE_DATA_DIR, 'orders')
+ADDED_PRODUCTS_FOLDER = os.path.join(BASE_DATA_DIR, 'added_products')
+
+# Definición de archivos
+FILE_NAME = 'Basesdedatos.csv'
+file_path = os.path.join(UPLOAD_FOLDER, FILE_NAME)
 ADDED_PRODUCTS_FILE = os.path.join(ADDED_PRODUCTS_FOLDER, 'added_products.csv')
 
-# Asegúrate de que la carpeta exista
-os.makedirs(ADDED_PRODUCTS_FOLDER, exist_ok=True)
+# Crear todas las carpetas necesarias
+for folder in [UPLOAD_FOLDER, RESULT_FOLDER, ORDERS_FOLDER, ADDED_PRODUCTS_FOLDER]:
+    os.makedirs(folder, exist_ok=True)
 
 # Función para inicializar el archivo de persistencia
 def initialize_persistence_file():
     if not os.path.exists(ADDED_PRODUCTS_FILE):
         # Crear el archivo CSV con las columnas necesarias
         pd.DataFrame(columns=[
-            'Cliente', 'Vendedor', 'Categoria', 'Descripcion', 'Cantidad', 'Factor', 'Material', 'Presentacion', 'Embalaje'
+            'Cliente', 'Vendedor', 'Categoria', 'Descripcion', 'Cantidad', 
+            'Factor', 'Material', 'Presentacion', 'Embalaje'
         ]).to_csv(ADDED_PRODUCTS_FILE, index=False)
 
-UPLOAD_FOLDER = os.path.join('data', 'uploaded_files')
-RESULT_FOLDER = os.path.join('data', 'results')
-os.makedirs(RESULT_FOLDER, exist_ok=True)
-
-FILE_NAME = 'Basesdedatos.csv'
-file_path = os.path.join(UPLOAD_FOLDER, FILE_NAME)
+# Inicializar archivo de persistencia
+initialize_persistence_file()
 
 @app.route('/')
 def index():
@@ -57,6 +62,21 @@ def analyze_client_data():
         vendedor = str(int(vendedor)).zfill(3)
         df['Cliente'] = df['Cliente'].str.strip()
         df['Vendedor'] = df['Vendedor'].str.strip().str.zfill(3)
+
+        # Buscar archivo de orders para este cliente/vendedor
+        orders_file = f'latest_orders_{client_id}_{vendedor}.csv'
+        orders_path = os.path.join(ORDERS_FOLDER, orders_file)
+
+        # Crear diccionario de orders si existe el archivo
+        orders_dict = {}
+        if os.path.exists(orders_path):
+            orders_df = pd.read_csv(orders_path)
+            for _, order_row in orders_df.iterrows():
+                orders_dict[order_row['material']] = {
+                    'pedido1': order_row['pedido1'],
+                    'pedido2': order_row['pedido2'],
+                    'total': order_row['total']
+                }
 
         month_columns = [
             "Jan-24", "Feb-24", "Mar-24", "Apr-24", "May-24", "Jun-24", "Jul-24", "Aug-24", "Sep-24", "Oct-24", "Nov-24", "Dec-24",
@@ -93,27 +113,38 @@ def analyze_client_data():
                 current_month: current_month_value,
                 next_year_month: next_year_month_value if not pd.isna(next_year_month_value) else 0
             }
+            
+            # Actualizar pedidos si existen en orders_dict y agregar indicador
+            if row['Material'] in orders_dict:
+                row_dict['Pedido1'] = orders_dict[row['Material']]['pedido1']
+                row_dict['Pedido2'] = orders_dict[row['Material']]['pedido2']
+                row_dict['Total'] = orders_dict[row['Material']]['total']
+                row_dict['has_saved_order'] = True
+            else:
+                row_dict['Pedido1'] = 0
+                row_dict['Pedido2'] = 0
+                row_dict['Total'] = 0
+                row_dict['has_saved_order'] = False
+            
             grouped_data[row['Categoria']].append(row_dict)
 
         unique_categories = sorted(df['Categoria'].dropna().unique())
 
-        # Leer productos persistentes del archivo CSV
-        ADDED_PRODUCTS_FILE = os.path.join('data', 'added_products', 'added_products.csv')
+        # Leer productos agregados
         if os.path.exists(ADDED_PRODUCTS_FILE):
             added_df = pd.read_csv(ADDED_PRODUCTS_FILE, dtype=str)
         else:
             added_df = pd.DataFrame(columns=[
-                'Cliente', 'Vendedor', 'Categoria', 'Descripcion', 'Cantidad', 'Factor', 'Material', 'Presentacion', 'Embalaje'
+                'Cliente', 'Vendedor', 'Categoria', 'Descripcion', 'Cantidad', 
+                'Factor', 'Material', 'Presentacion', 'Embalaje'
             ])
 
-        # Filtrar por cliente y vendedor
         filtered_products = added_df[
-            (added_df['Cliente'] == client_id) & (added_df['Vendedor'] == vendedor)
+            (added_df['Cliente'] == client_id) & 
+            (added_df['Vendedor'] == vendedor)
         ]
 
-        # Convertir los productos filtrados a una lista de diccionarios
         products = filtered_products.to_dict(orient='records')
-
 
         return render_template(
             'result.html',
@@ -122,11 +153,51 @@ def analyze_client_data():
             message="Análisis Exitoso!",
             month_columns=[current_month, next_year_month],
             categorias=unique_categories,
-            products=products  # Pasar productos persistentes a la plantilla
+            products=products,
+            has_orders=bool(os.path.exists(orders_path))
         )
 
     except Exception as e:
         return f"An error occurred: {e}", 500
+
+@app.route('/save_orders', methods=['POST'])
+def save_orders():
+    try:
+        # Obtener los datos del request
+        data = request.get_json()
+        client_id = data.get('client_id')
+        vendedor = data.get('vendedor')
+        orders = data.get('orders', [])
+        
+        # Crear el nombre del archivo fijo
+        filename = f'latest_orders_{client_id}_{vendedor}.csv'
+        orders_file = os.path.join(ORDERS_FOLDER, filename)
+        
+        # Eliminar archivo anterior si existe
+        if os.path.exists(orders_file):
+            os.remove(orders_file)
+        
+        # Crear DataFrame con los pedidos
+        orders_df = pd.DataFrame(orders)
+        orders_df['fecha_actualizacion'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        orders_df['cliente'] = client_id
+        orders_df['vendedor'] = vendedor
+        
+        # Guardar en CSV
+        orders_df.to_csv(orders_file, index=False)
+        
+        return jsonify({
+            "success": True,
+            "message": "Pedidos actualizados exitosamente",
+            "filename": filename
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
@@ -271,7 +342,7 @@ def products_by_category():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+  
 
 @app.route('/get_products', methods=['GET'])
 def get_products():
