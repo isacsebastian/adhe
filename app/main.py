@@ -240,9 +240,11 @@ def add_product():
         if missing_columns:
             return jsonify({"error": f"El archivo CSV no contiene las columnas requeridas: {missing_columns}"}), 400
 
-        # Filtrar los datos según la categoría y descripción proporcionadas
+        # Filtrar los datos según la categoría y descripción proporcionadas y eliminar duplicados
         filtered_row = df[(df['Categoria'].str.strip() == categoria) &
-                          (df['Descripcion'].str.strip() == producto)]
+                         (df['Descripcion'].str.strip() == producto)] \
+                        .drop_duplicates(subset=['Categoria', 'Descripcion']) \
+                        .reset_index(drop=True)
 
         if filtered_row.empty:
             return jsonify({"error": "No se encontró un producto con la categoría y descripción proporcionadas."}), 404
@@ -254,13 +256,11 @@ def add_product():
         embalaje = filtered_row.iloc[0]['Embalaje']
 
         # Validar cantidad múltiplo del factor
-        # En la función add_product
         if cantidad % factor != 0:
             return jsonify({
                 "error": f"La cantidad debe ser múltiplo de {factor}. Por favor, ingrese un número que sea múltiplo de {factor}.",
                 "factor": factor
             }), 400
-        
 
         # Leer o inicializar el archivo de persistencia
         if os.path.exists(ADDED_PRODUCTS_FILE) and os.path.getsize(ADDED_PRODUCTS_FILE) > 0:
@@ -270,9 +270,9 @@ def add_product():
 
         # Verificar si ya existe un registro para cliente, vendedor, categoría y producto
         existing_row = added_df[(added_df['Cliente'].str.strip() == client_id) &
-                                (added_df['Vendedor'].str.strip() == vendedor) &
-                                (added_df['Categoria'].str.strip() == categoria) &
-                                (added_df['Descripcion'].str.strip() == producto)]
+                              (added_df['Vendedor'].str.strip() == vendedor) &
+                              (added_df['Categoria'].str.strip() == categoria) &
+                              (added_df['Descripcion'].str.strip() == producto)]
 
         if not existing_row.empty:
             # Actualizar cantidad existente
@@ -315,8 +315,7 @@ def add_product():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
+    
 
 @app.route('/products_by_category', methods=['GET'])
 def products_by_category():
@@ -355,30 +354,32 @@ def products_by_category():
 
 @app.route('/get_products', methods=['GET'])
 def get_products():
-    # Ruta del archivo de productos persistentes
-    ADDED_PRODUCTS_FILE = os.path.join('data', 'added_products', 'added_products.csv')
-
-    # Verificar si el archivo existe
-    if not os.path.exists(ADDED_PRODUCTS_FILE):
-        return jsonify({"error": "No hay productos persistentes almacenados."}), 404
-
     try:
-        # Leer los productos del archivo CSV
-        added_df = pd.read_csv(ADDED_PRODUCTS_FILE, dtype=str)
-        
-        # Convertir a lista de diccionarios para enviarlo a la plantilla
-        products = added_df.to_dict(orient='records')
+        categoria = request.args.get('categoria')
+        if not categoria:
+            return jsonify({"error": "Categoría no proporcionada"}), 400
 
-        # Renderizar una plantilla con los productos
-        return render_template(
-            'result.html',  # Nueva plantilla para mostrar los productos
-            products=products
-        )
+        df = pd.read_csv(file_path, dtype=str, low_memory=False)
+        df.columns = df.columns.str.strip()
+
+        # Filtrado mejorado con limpieza de strings
+        df['Categoria'] = df['Categoria'].str.strip()
+        df['Descripcion'] = df['Descripcion'].str.strip()
+        
+        filtered_df = df[df['Categoria'] == categoria.strip()]
+        
+        # Eliminar duplicados considerando todas las características relevantes
+        unique_products = filtered_df.drop_duplicates(
+            subset=['Descripcion', 'Material', 'Presentacion', 'Factor'],
+            keep='first'
+        ).sort_values('Descripcion')
+
+        productos = unique_products[['Descripcion', 'Material', 'Presentacion', 'Factor']].to_dict('records')
+        return jsonify({"productos": productos})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
+    
 @app.route('/download_filtered_data', methods=['POST'])
 def download_filtered_data():
     client_id = request.form.get('client_id')
