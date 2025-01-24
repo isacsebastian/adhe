@@ -6,7 +6,8 @@
     <title>Analysis Result</title>
     <style>
         body {
-            font-family: Inter, sans-serif;
+            /* font-family: Inter, sans-serif; */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             margin: 0;
             padding: 20px;
             background: linear-gradient(135deg, #1e3c72, #2a5298);
@@ -71,8 +72,9 @@ table {
     border-collapse: separate;
     border-spacing: 0;
     background: transparent;
-    font-family: Inter, -apple-system, sans-serif;
+    /* font-family: Inter, -apple-system, sans-serif; */
     padding-bottom: 30px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 /* Header Styles */
@@ -269,6 +271,15 @@ tr:last-child td:last-child {
         box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
     }
 
+    .month-style {
+    color: #646464;
+    font-size: 16px;
+    font-weight: 500;
+    background-color: #f8f9ff;
+    border-radius: 50px;
+    padding: 10px 30px;
+}
+
     
         @media (max-width: 768px) {
     .container {
@@ -421,12 +432,12 @@ tr:last-child td:last-child {
 
         {% if grouped_data %}
         {% for category, rows in grouped_data.items() %}
-        <h2>{{ category }} - Enero</h2>
+        <h2 class="category-style">{{ category }} <span class="month-style">{% if 'Jan' in current_month %}enero{% elif 'Feb' in current_month %}febrero{% elif 'Mar' in current_month %}marzo{% elif 'Apr' in current_month %}abril{% elif 'May' in current_month %}mayo{% elif 'Jun' in current_month %}junio{% elif 'Jul' in current_month %}julio{% elif 'Aug' in current_month %}agosto{% elif 'Sep' in current_month %}septiembre{% elif 'Oct' in current_month %}octubre{% elif 'Nov' in current_month %}noviembre{% elif 'Dec' in current_month %}diciembre{% endif %}</span></h2>
         <div class="table-container">
             <table>
                 <tr>
-                    <th>Material</th>
-                    <th>Descripción</th>
+                    <th>Código</th>
+                    <th>Producto</th>
                     <th>Presentación</th>
                     <th>Embalaje</th>
                     {% for month in month_columns %}

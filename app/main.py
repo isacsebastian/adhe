@@ -154,7 +154,8 @@ def analyze_client_data():
             month_columns=[current_month, next_year_month],
             categorias=unique_categories,
             products=products,
-            has_orders=bool(os.path.exists(orders_path))
+            has_orders=bool(os.path.exists(orders_path)),
+            current_month=current_month  
         )
 
     except Exception as e:
