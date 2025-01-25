@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Data Filter</title>
+    <title>Gestión Analítica Adheplast </title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+
             margin: 0;
             padding: 0;
             display: flex;
@@ -32,7 +33,7 @@
             text-align: center;
             color: #333;
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
             box-sizing: border-box;
             border-radius: 20px;
 
@@ -94,8 +95,9 @@
 
         /* Estilos responsivos */
         @media (max-width: 768px) {
+
             form {
-          padding: 20px;
+          padding: 40px;
             }
 
             h1 {
@@ -205,7 +207,7 @@
 </div>
 
     <form action="/analyze" method="post">
-        <h1>Analizar Datos de Cliente</h1>
+        <h1>Gestión Analítica de Clientes</h1>
         <!-- Campo para ingresar el ID del Cliente -->
         <label for="client_id">Ingresar Cliente ID:</label>
         <input type="text" name="client_id" id="client_id" required>
